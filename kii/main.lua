@@ -86,8 +86,20 @@ function Kii.Render.polygon(x, y, width, height, shape)
                 x + width, y + math.floor(height / 2),
                 x, y + height}
     -- Placeholder
-  else -- Defaults to box
+  elseif shape == "Text Box Header" then
     vertices = {x, y,
+                math.floor(x + width * (7/8)), y,
+                x + width, y + height,
+                x, y + height}
+  elseif shape == "Shadow" then
+    vertices = {x + width, y + 10,
+                x + width + 10, y + 10,
+                x + width + 10, y + 10 + height,
+                x + 10, y + 10 + height,
+                x + 10, y + height}
+
+  else -- Defaults to box
+    vertices =       {x, y,
                       x + width, y,
                       x + width, y + height,
                       x, y + height}
@@ -166,25 +178,36 @@ function Kii.Render.drawElement(element)
   -- Now render any applicable text on top!
   -- The fun part, we need to just get the current alpha
   local r, g, b, a = love.graphics.getColor()
-  Kii.Render.setColor(element.Text._color, a)
-  Kii.Render.setFont(element.Text._font)
-  -- Now we can render the text and be done!
-  Kii.Render.printText(element.Text._text,
-                       x + element.Dimensions._padding,
-                       y + element.Dimensions._padding,
-                       width - element.Dimensions._padding * 2,
-                       height - element.Dimensions._padding * 2,
-                       element.Text._alignX, element.Text._alignY)
+  if element.Text ~= "None" then
+    Kii.Render.setColor(element.Text._color, a)
+    Kii.Render.setFont(element.Text._font)
+    -- Now we can render the text and be done!
+    Kii.Render.printText(element.Text._text,
+                         x + element.Dimensions._padding,
+                         y + element.Dimensions._padding,
+                         width - element.Dimensions._padding * 2,
+                         height - element.Dimensions._padding * 2,
+                         element.Text._alignX, element.Text._alignY)
+  end
 
+end
+
+function Kii.Render.drawContainer(container)
+  local index = 1
+  while index <= #container.Elements do
+    Kii.Render.drawElement(container.Elements[index])
+    index = index + 1
+  end
 end
 
 Kii.Element = {}
 
-function Kii.Element.createElement(template)
+function Kii.Element.create(template)
   template = template or {}
   local element = {
-    _name = template._name or "Default Button Name",
-    _type = template._type or "Button",
+    _name = template._name or "Default Element Name",
+    _type = template._type or "Box",
+    _interactive = false,
     Dimensions = template.Dimensions or {_height = 100, _width = 300,
                                          _shape = "Right Iso Tri", _color = "Blue",
                                          _padding = 10, _alpha = 1},
@@ -193,11 +216,123 @@ function Kii.Element.createElement(template)
                              _font = "Anime_Ace", _color = "White",
                              _alignX = "center", _alignY = "center"},
     Animation = template.Animation or {_type = "None", _frame = 0,
-                                       _modifier = 5},
-    Shader = template.Shader or {_type = "Darken", _frame = 0,
+                                       _modifier = 1},
+    Shader = template.Shader or {_type = "None", _frame = 0,
                                        _modifier = 1}
   }
   return element
+end
+
+Kii.Container = {}
+
+function Kii.Container.create(template)
+  template = template or {
+    _type = "Text Box",
+    _shadow = true,
+    Dimensions = {
+      _height = 250, _width = 500
+    },
+    Position = {
+      _x = 100, _y = 100
+    },
+    Colors = {
+      _primary = "White",
+      _accent = "Red",
+      _detail = "Black"
+    },
+    Header = {
+      _text = "Default Header", _font = "Anime_Ace"
+    },
+    Body = {
+      _text = "Just some generic body text", _font = "Anime_Ace"
+    },
+    Elements = {}
+  }
+
+  local container = template
+
+  if template._type == "Text Box" then
+    -- Find out if the texbox has a header
+    if template.Header then
+      -- If so create one based off of the textbox dimensions
+      local header = Kii.Element.create({
+        _name = "Text Box Header",
+        Dimensions = {_height = math.floor(template.Dimensions._height / 8),
+                      _width = math.floor(template.Dimensions._width / 3),
+                      _shape = "Text Box Header", _color = template.Colors._accent,
+                      _padding = 2, _alpha = 1},
+        Position = {_x = template.Position._x + math.floor(template.Position._x / 16),
+                    _y = template.Position._y - math.floor(template.Dimensions._height / 8) },
+        Text = {_text = template.Header._text, _font = template.Header._font,
+                _color = template.Colors._detail, _alignX = "left", _alignY = "center" }
+        
+      })
+
+      table.insert(container.Elements, header)
+    end
+    -- Add the main body that holds the text
+    local body = Kii.Element.create({
+      _name = "Text Box Body",
+      Dimensions = {
+        _height = template.Dimensions._height, 
+        _width = template.Dimensions._width,
+        _shape = "Box", _color = template.Colors._primary,
+        _padding = 10, _alpha = 1
+      },
+      Position = template.Position,
+      Text = {
+        _text = template.Body._text, _font = template.Body._font,
+        _color = template.Colors._detail, _alignX = "center", _alignY = "center" 
+      }
+    })
+    table.insert(container.Elements, body)
+    -- Pop in a shadow..
+    if template._shadow then
+      local shadow = Kii.Element.create({
+        _name = "Text Box Shadow Side",
+        Position = {_x = template.Position._x + template.Dimensions._width,
+                    _y = template.Position._y + 10},
+        Text = "None",
+        Dimensions = {
+          _height = template.Dimensions._height,
+          _width = 10,
+          _shape = "Box", _color = "Black",
+          _padding = 0, _alpha = 1
+        }
+      })
+      local shadow2 = Kii.Element.create({
+        _name = "Text Box Shadow Bottom",
+        Position = {_x = template.Position._x + 10,
+                    _y = template.Position._y + template.Dimensions._height},
+        Text = "None",
+        Dimensions = {
+          _height = 10,
+          _width = template.Dimensions._width - 10,
+          _shape = "Box", _color = "Black",
+          _padding = 0, _alpha = 1
+        }
+      })
+      table.insert(container.Elements, shadow)
+      table.insert(container.Elements, shadow2)
+    end
+  end
+
+  return container
+
+end
+
+function Kii.Container.translate(container, x, y)
+  local xDis = container.Position._x - x
+  local yDis = container.Position._y - y
+  
+  local index = 1
+  while index <= #container.Elements do
+    container.Elements[index].Position._x = container.Elements[index].Position._x - xDis
+    container.Elements[index].Position._y = container.Elements[index].Position._y - yDis
+    index = index + 1
+  end
+  container.Position._x = x
+  container.Position._y = y
 end
 
 return Kii
