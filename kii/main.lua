@@ -9,6 +9,13 @@ function Kii.Math.clamp(value, min, max)
   local value = math.min(math.max(value, min), max)
   return value
 end
+-- Simple point colission detection
+function Kii.Math.checkCollision(x, y, tX, tY, tW, tH)
+  return (
+    x >= tX and x <= tX + tW and
+    y >= tY and y <= tY + tH
+  )
+end
 
 -- All things related to actually rendering the game!
 Kii.Render = {
@@ -36,12 +43,12 @@ function Kii.Render.setColor(color, alpha, palette)
                          Kii.Render.Palette[palette][color][3],
                          alpha)
 end
--- Returns the correct color
+-- Returns the correct color code
 function Kii.Render.colorFind(color, palette)
   color = color or "Black"
   palette = palette or "Tauriel"
 
-  return Kii.Render.Palette[palette][color][1], 
+  return Kii.Render.Palette[palette][color][1],
          Kii.Render.Palette[palette][color][2],
          Kii.Render.Palette[palette][color][3]
 end
@@ -97,14 +104,78 @@ function Kii.Render.polygon(x, y, width, height, shape)
                 x + width + 10, y + 10 + height,
                 x + 10, y + 10 + height,
                 x + 10, y + height}
+  elseif shape == "Rounded Box" then
+    local e = 10
+    -- Draw the top bar
+    love.graphics.polygon('fill',
+      x + e, y,
+      x + width - e, y,
+      x + width - e, y + e,
+      x + e, y + e)
+    -- Draw the bottom bar
+    love.graphics.polygon('fill',
+      x + e, y + height - e,
+      x + width - e, y + height - e,
+      x + width - e, y + height,
+      x + e, y + height
+    )
+    -- Draw the main bar
+    love.graphics.polygon('fill',
+      x, y + e,
+      x + width, y + e,
+      x + width, y + height - e,
+      x, y + height - e
+    )
+    -- NW arch
+    love.graphics.arc("fill",
+      x + e, y + e, 
+      e, -3.1415, -3.1415 / 2, 10
+    )
+    -- NE arch
+    love.graphics.arc("fill",
+      x + width - e, y + e, 
+      e, 0, -3.1415 / 2, 10
+    )
+    -- SE arch
+    love.graphics.arc("fill",
+      x + width - e, y + height - e, 
+      e, 0, 3.1415 / 2, 10
+    )
+    -- SW arch
+    love.graphics.arc("fill",
+      x + e, y + height - e, 
+      e, 3.1415, 3.1415 / 2, 10
+    )
+    shape = "None"
+  elseif shape == "Obround" then
+    local radius = math.floor(height / 2)
+    -- Draw the rectangle
+    love.graphics.polygon("fill",
+      x + radius, y,
+      x + width - radius, y,
+      x + width - radius, y + height,  
+      x + radius, y + height
+    )
+    -- Draw the left side arc
+    love.graphics.arc("fill",
+      x + radius, y + radius,
+      radius, 3.1415 / 2, 3.1415 * 3/2,
+      20
+      )
+    love.graphics.arc("fill",
+      x + width - radius, y + radius,
+      radius, -3.1415 / 2, 3.1415 / 2,
+      20
+    )
 
+    shape = "None"
   else -- Defaults to box
     vertices =       {x, y,
                       x + width, y,
                       x + width, y + height,
                       x, y + height}
   end
-  love.graphics.polygon('fill', vertices)
+  if shape ~= "None" then love.graphics.polygon('fill', vertices) end
 end
 -- Handles animating color and transparancy changes to elements
 function Kii.Render.applyShaders(element)
@@ -168,7 +239,7 @@ function Kii.Render.applyAnimations(element)
 
   return x, y, width, height
 end
-
+-- Handles drawing Elements!
 function Kii.Render.drawElement(element)
   -- First thing's first, let's set the colors
   Kii.Render.applyShaders(element)
@@ -191,11 +262,19 @@ function Kii.Render.drawElement(element)
   end
 
 end
-
+-- Handles drawing Containers
 function Kii.Render.drawContainer(container)
   local index = 1
   while index <= #container.Elements do
     Kii.Render.drawElement(container.Elements[index])
+    index = index + 1
+  end
+end
+-- Handles drawing Scenes
+function Kii.Render.drawScene(scene)
+  local index = 1
+  while index <= #scene.Containers do
+    Kii.Render.drawContainer(scene.Containers[index])
     index = index + 1
   end
 end
@@ -207,7 +286,7 @@ function Kii.Element.create(template)
   local element = {
     _name = template._name or "Default Element Name",
     _type = template._type or "Box",
-    _interactive = false,
+    _interactive = template._interactive or false,
     Dimensions = template.Dimensions or {_height = 100, _width = 300,
                                          _shape = "Right Iso Tri", _color = "Blue",
                                          _padding = 10, _alpha = 1},
@@ -226,46 +305,46 @@ end
 Kii.Container = {}
 
 function Kii.Container.create(template)
-  template = template or {
-    _type = "Text Box",
-    _shadow = true,
-    Dimensions = {
+  template = template or {}
+
+  local container = {
+    _type = template._type or "Text Box",
+    _shadow = template._shadow or true,
+    Dimensions = template.Dimensions or {
       _height = 250, _width = 500
     },
-    Position = {
+    Position = template.Position or{
       _x = 100, _y = 100
     },
-    Colors = {
+    Colors = template.Colors or {
       _primary = "White",
       _accent = "Red",
       _detail = "Black"
     },
-    Header = {
+    Header = template.Header or {
       _text = "Default Header", _font = "Anime_Ace"
     },
-    Body = {
+    Body = template.Body or {
       _text = "Just some generic body text", _font = "Anime_Ace"
     },
-    Elements = {}
+    Elements = template.Elements or {}
   }
 
-  local container = template
-
-  if template._type == "Text Box" then
+  if container._type == "Text Box" then
     -- Find out if the texbox has a header
-    if template.Header then
+    if container.Header then
       -- If so create one based off of the textbox dimensions
       local header = Kii.Element.create({
         _name = "Text Box Header",
-        Dimensions = {_height = math.floor(template.Dimensions._height / 8),
-                      _width = math.floor(template.Dimensions._width / 3),
-                      _shape = "Text Box Header", _color = template.Colors._accent,
+        Dimensions = {_height = math.floor(container.Dimensions._height / 8),
+                      _width = math.floor(container.Dimensions._width / 3),
+                      _shape = "Text Box Header", _color = container.Colors._accent,
                       _padding = 2, _alpha = 1},
-        Position = {_x = template.Position._x + math.floor(template.Position._x / 16),
-                    _y = template.Position._y - math.floor(template.Dimensions._height / 8) },
-        Text = {_text = template.Header._text, _font = template.Header._font,
-                _color = template.Colors._detail, _alignX = "left", _alignY = "center" }
-        
+        Position = {_x = container.Position._x + math.floor(container.Position._x / 16),
+                    _y = container.Position._y - math.floor(container.Dimensions._height / 8) },
+        Text = {_text = container.Header._text, _font = container.Header._font,
+                _color = container.Colors._detail, _alignX = "left", _alignY = "center" }
+
       })
 
       table.insert(container.Elements, header)
@@ -274,27 +353,27 @@ function Kii.Container.create(template)
     local body = Kii.Element.create({
       _name = "Text Box Body",
       Dimensions = {
-        _height = template.Dimensions._height, 
-        _width = template.Dimensions._width,
-        _shape = "Box", _color = template.Colors._primary,
+        _height = container.Dimensions._height,
+        _width = container.Dimensions._width,
+        _shape = "Box", _color = container.Colors._primary,
         _padding = 10, _alpha = 1
       },
-      Position = template.Position,
+      Position = container.Position,
       Text = {
-        _text = template.Body._text, _font = template.Body._font,
-        _color = template.Colors._detail, _alignX = "center", _alignY = "center" 
+        _text = container.Body._text, _font = container.Body._font,
+        _color = container.Colors._detail, _alignX = "center", _alignY = "center" 
       }
     })
     table.insert(container.Elements, body)
     -- Pop in a shadow..
-    if template._shadow then
+    if container._shadow then
       local shadow = Kii.Element.create({
         _name = "Text Box Shadow Side",
-        Position = {_x = template.Position._x + template.Dimensions._width,
-                    _y = template.Position._y + 10},
+        Position = {_x = container.Position._x + container.Dimensions._width,
+                    _y = container.Position._y + 10},
         Text = "None",
         Dimensions = {
-          _height = template.Dimensions._height,
+          _height = container.Dimensions._height,
           _width = 10,
           _shape = "Box", _color = "Black",
           _padding = 0, _alpha = 1
@@ -302,12 +381,12 @@ function Kii.Container.create(template)
       })
       local shadow2 = Kii.Element.create({
         _name = "Text Box Shadow Bottom",
-        Position = {_x = template.Position._x + 10,
-                    _y = template.Position._y + template.Dimensions._height},
+        Position = {_x = container.Position._x + 10,
+                    _y = container.Position._y + container.Dimensions._height},
         Text = "None",
         Dimensions = {
           _height = 10,
-          _width = template.Dimensions._width - 10,
+          _width = container.Dimensions._width - 10,
           _shape = "Box", _color = "Black",
           _padding = 0, _alpha = 1
         }
@@ -315,16 +394,31 @@ function Kii.Container.create(template)
       table.insert(container.Elements, shadow)
       table.insert(container.Elements, shadow2)
     end
+  elseif container._type == "Button" then
+    local button = Kii.Element.create({
+      _name = container._name or "Default Button",
+      _type = container._type or "Button",
+      _interactive = container._interactive or false,
+      Dimensions = {
+        _height = 50, _width = 150,
+        _shape = "Obround", _color = "Red",
+        _padding = 10, _alpha = 1
+      },
+      Text = template.Text or {
+        _text = "I do nothing!!", _font = "Anime_Ace",
+        _color = "Black", _alignX = "center", _alignY = "center"
+      }
+    })
+    table.insert(container.Elements, button)
   end
-
   return container
 
 end
-
+-- Allows for moving of a container with all its elements!
 function Kii.Container.translate(container, x, y)
   local xDis = container.Position._x - x
   local yDis = container.Position._y - y
-  
+
   local index = 1
   while index <= #container.Elements do
     container.Elements[index].Position._x = container.Elements[index].Position._x - xDis
@@ -334,5 +428,149 @@ function Kii.Container.translate(container, x, y)
   container.Position._x = x
   container.Position._y = y
 end
+
+Kii.Scene = {}
+
+function Kii.Scene.create(template)
+  template = template or {
+    _type = "Main Menu"
+  }
+
+  local scene = template
+
+  scene._mouseOver = nil
+  scene._mouseDown = nil
+  scene._mouseUp = nil
+  scene.Containers = {}
+
+  if scene._type == "Main Menu" then
+    print("I got to the Main menu!")
+    local container = Kii.Container.create({
+      _name = "Quit Button",
+      _type = "Button",
+      _interactive = true,
+      Text = {
+        _text = "Quit!", _font = "Anime_Ace",
+        _color = "Black", _alignX = "center", _alignY = "center"
+      }
+    })
+    container.Elements[1].click = function(self)
+      love.event.quit()
+    end
+    container.Elements[1].over = function(self)
+      self.Animation._type = "Jitter"
+      self.Shader._type = "Lighten"
+      self.Shader._frame = 0
+    end
+    container.Elements[1].leave = function(self)
+      self.Animation._type = "None"
+      self.Shader._type = "None"
+      self.Shader._frame = 0
+    end
+    table.insert(scene.Containers, container)
+
+  end
+
+
+  return scene
+
+end
+
+function Kii.Scene.findElement(scene, x, y)
+  local cIndex = 1
+  local eIndex = 1
+  local returnValue = nil
+
+  while (cIndex <= #scene.Containers and returnValue == nil) do
+    while (eIndex <= #scene.Containers[cIndex].Elements and returnValue == nil) do
+      if scene.Containers[cIndex].Elements[eIndex]._interactive ~= 999 then
+        if Kii.Math.checkCollision(x, y,
+          scene.Containers[cIndex].Elements[eIndex].Position._x,
+          scene.Containers[cIndex].Elements[eIndex].Position._y,
+          scene.Containers[cIndex].Elements[eIndex].Dimensions._width,
+          scene.Containers[cIndex].Elements[eIndex].Dimensions._height)
+        then
+          returnValue = {cIndex + 0, eIndex + 0}
+        end
+
+      end
+      eIndex = eIndex + 1
+    end
+    eIndex = 1
+    cIndex = cIndex + 1
+  end
+
+  return returnValue
+end
+
+function Kii.Scene.handleEvent(scene, event) -- down(), up(), click(), over(), leave(), abandon()
+  if event[1] == "Mouse Down" then -- Calls down() on an element at x, y
+    if event[2] == 1 then
+      print("Mousedown works!")
+      scene._mouseDown = Kii.Scene.findElement(scene, event[3], event[4])
+      if scene._mouseDown ~= nil then
+        if scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].down then
+          scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].down(scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]])
+        end
+      end
+    end
+  elseif event[1] == "Mouse Up" then -- Calls click() if down = up, else down.abandon(), up.up()
+    if event[2] == 1 then
+      scene._mouseUp = Kii.Scene.findElement(scene, event[3], event[4])
+      if scene._mouseUp ~= nil then
+        if scene._mouseDown ~= nil then
+          if scene._mouseUp[1] == scene._mouseDown[1]  and
+             scene._mouseUp[2] == scene._mouseDown[2] then
+            if scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].click then
+              scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].click()
+            end
+          end
+        else
+          print("Mouseup works!")
+          if scene.Containers[scene._mouseUp[1]].Elements[scene._mouseUp[2]].up then
+            scene.Containers[scene._mouseUp[1]].Elements[scene._mouseUp[2]].up()
+          end
+        end
+      end
+      if scene._mouseDown ~= nil then
+        print("Mouse abandon works!")
+        if scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].abandon then
+          scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].abandon(scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]])
+        end
+      end
+      scene._mouseDown = nil
+      scene._mouseUp = nil
+    end
+  elseif event[1] == "Mouse Move" then -- if oldMove ~= newMove then oldMove.leave(), newMove.over()
+    local placeholder = Kii.Scene.findElement(scene, event[2], event[3])
+    if placeholder ~= nil then
+      if scene._mouseOver ~= nil then
+        if placeholder[1] ~= scene._mouseOver[1] and
+           placeholder[2] ~= scene._mouseOver[2] then
+            print("Mouse leave works!")
+            if scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave then
+              scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave(scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]])
+            end
+            print("Mouse over works!")
+            if scene.Containers[placeholder[1]].Elements[placeholder[2]].over then
+              scene.Containers[placeholder[1]].Elements[placeholder[2]].over(scene.Containers[placeholder[1]].Elements[placeholder[2]])
+            end
+        end
+      else
+        print("Mouse over works!")
+        if scene.Containers[placeholder[1]].Elements[placeholder[2]].over then
+          scene.Containers[placeholder[1]].Elements[placeholder[2]].over(scene.Containers[placeholder[1]].Elements[placeholder[2]])
+        end
+      end
+    elseif scene._mouseOver ~= nil then
+      print("Mouse leave works!")
+      if scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave then
+        scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave(scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]])
+      end
+    end
+    scene._mouseOver = placeholder
+  end
+end
+
 
 return Kii
