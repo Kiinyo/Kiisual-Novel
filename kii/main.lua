@@ -235,8 +235,9 @@ function Kii.Render.applyAnimations(element)
   if element.Animation._type == "Jitter" then
     x = math.floor(x + element.Animation._modifier * math.random() - element.Animation._modifier / 2)
     y = math.floor(y + element.Animation._modifier * math.random() - element.Animation._modifier / 2)
+  elseif element.Animation._type == "Press" then
+    y = y + element.Dimensions._height / 16
   end
-
   return x, y, width, height
 end
 -- Handles drawing Elements!
@@ -249,7 +250,7 @@ function Kii.Render.drawElement(element)
   -- Now render any applicable text on top!
   -- The fun part, we need to just get the current alpha
   local r, g, b, a = love.graphics.getColor()
-  if element.Text ~= "None" then
+  if element.Text._text ~= "@None" then
     Kii.Render.setColor(element.Text._color, a)
     Kii.Render.setFont(element.Text._font)
     -- Now we can render the text and be done!
@@ -279,141 +280,374 @@ function Kii.Render.drawScene(scene)
   end
 end
 
+
 Kii.Element = {}
 
 function Kii.Element.create(template)
   template = template or {}
+  template.Dimensions = template.Dimensions or {}
+  template.Position = template.Position or {}
+  template.Text = template.Text or {}
+  template.Animation = template.Animation or {}
+  template.Shader = template.Shader or {}
+  template.Actions = template.Actions or {}
+
   local element = {
     _name = template._name or "Default Element Name",
-    _type = template._type or "Box",
+    _type = template._type or "Default Type",
     _interactive = template._interactive or false,
-    Dimensions = template.Dimensions or {_height = 100, _width = 300,
-                                         _shape = "Right Iso Tri", _color = "Blue",
-                                         _padding = 10, _alpha = 1},
-    Position = template.Position or {_x = 0, _y = 0},
-    Text = template.Text or {_text = "This is a default string",
-                             _font = "Anime_Ace", _color = "White",
-                             _alignX = "center", _alignY = "center"},
-    Animation = template.Animation or {_type = "None", _frame = 0,
-                                       _modifier = 1},
-    Shader = template.Shader or {_type = "None", _frame = 0,
-                                       _modifier = 1}
+    Dimensions = {
+      _relative = template.Dimensions._relative or "Both",
+      _height = template.Dimensions._height or 1,
+      _width = template.Dimensions._width or 1,
+      _shape = template.Dimensions._shape or "Obround",
+      _color = template.Dimensions._color or "Blue",
+      _padding = template.Dimensions._padding or 10,
+      _alpha = template.Dimensions._alpha or 1,
+    },
+    Position = { -- Becomes % of container width if adopted by a container
+      _x = template.Position._x or 0,
+      _y = template.Position._y or 0,
+      _xOffset = template.Position._xOffset or nil,
+      _yOffset = template.Position._yOffset or nil,
+      _alignX = template.Position._alignX or "Left",
+      _alignY = template.Position._alignY or "Up"
+    },
+    Text = {
+      _text = template.Text._text or "This is a default string",
+      _font = template.Text._font or "Anime_Ace",
+      _color = template.Text._color or "White",
+      _alignX = template.Text._alignX or "center",
+      _alignY = template.Text._alignY or "center"
+    },
+    Animation = {
+      _type = template.Animation._type or "None",
+      _frame = template.Animation._frame or 0,
+      _modifier = template.Animation._modifier or 1
+    },
+    Shader = {
+      _type = template.Shader._type or "None",
+      _frame = template.Shader._frame or 0, 
+      _modifier = template.Shader._modifier or 1
+    },
+    Actions = {
+      -- Mouse press the object
+      down = template.Actions.down or "DebugDown",
+      -- Mouse release on the object
+      up = template.Actions.up or "DebugUp",
+      -- Mouse press and release on the object
+      click = template.Actions.click or "DebugClick",
+      -- Mouse release not over the object after mouse press
+      abandon = template.Actions.abandon or "DebugAbandon",
+      -- Moving the mouse over the element
+      over = template.Actions.over or "DebugOver",
+      -- Moving the mouse away from the element
+      leave = template.Actions.leave or "DebugLeave"
+    }
   }
+
+  element.down = Kii.Element.Actions[element.Actions.down]
+  element.up = Kii.Element.Actions[element.Actions.up]
+  element.click = Kii.Element.Actions[element.Actions.click]
+  element.abandon = Kii.Element.Actions[element.Actions.abandon]
+  element.over = Kii.Element.Actions[element.Actions.over]
+  element.leave = Kii.Element.Actions[element.Actions.leave]
+
   return element
 end
+
+Kii.Element.Actions = {
+  QuitGame = function (self, container, scene)
+    love.event.quit()
+  end,
+  None = function (self, container, scene)
+    -- Nothing here!
+  end,
+  Excite = function (self, container, scene)
+    self.Animation._type = "Jitter"
+    self.Shader._type = "Lighten"
+    self.Shader._frame = 0
+    self.Shader._modifier = 0.5
+  end,
+  Press = function (self, container, scene)
+    self.Animation._type = "Press"
+    self.Animation._frame = 0
+  end,
+  Reset = function (self, container, scene)
+    self.Animation._type = "None"
+    self.Shader._type = "None"
+    self.Shader._modifier = 1
+    self.Shader._frame = 0
+    self.Animation._modifier = 1
+    self.Animation._frame = 0
+  end,
+  DebugDown = function (self, container, scene)
+    print("DebugDown")
+  end,
+  DebugUp = function (self, container, scene)
+    print("DebugUp")
+  end,
+  DebugClick = function (self, container, scene)
+    print("DebugClick")
+  end,
+  DebugAbandon = function (self, container, scene)
+    print("DebugAbandon")
+  end,
+  DebugOver = function (self, container, scene)
+    print("DebugOver")
+  end,
+  DebugLeave = function (self, container, scene)
+    print("DebugLeave")
+  end,
+  DeleteContainer = function (self, container, scene)
+    scene._mouseOver = nil
+    scene._mouseDown = nil
+    scene._mouseUp = nil
+    Kii.Scene.removeContainer(scene, container._name)
+  end
+}
+
+Kii.Elements = {
+  Debug = {
+    Shadow = {
+      _name = "Debug Shadow",
+      _type = "Shadow",
+      Dimensions = {
+        _shape = "Box",
+        _color = "Detail",
+        _padding = 0,
+        _alpha = 0.5
+      },
+      Position = {
+        _x = 0.0625,
+        _y = 0.0625,
+      },
+      Text = {
+        _text = "@None"
+      }
+    },
+    Body = {
+      _name = "Debug Body",
+      _type = "Body",
+      Dimensions = {
+        _shape = "Box",
+        _color = "Primary"
+      },
+      Text = {
+        _text = "This shouldn't matter...",
+        _color = "Detail"
+      }
+    },
+    Header = {
+      _name = "Debug Header",
+      _type = "Header",
+      Dimensions = {
+        _height = 0.125,
+        _width = 0.25,
+        _shape = "Text Box Header",
+        _color = "Accent",
+        _padding = 15
+      },
+      Position = {
+        _x = 0.03125,
+        _alignY = "Above"
+      },
+      Text = {
+        _text = "I shouldn't see this anyway",
+        _color = "Detail",
+        _alignX = "left"
+      }
+    },
+    ExitButton = {
+      _name = "Debug ExitButton",
+      _type = "Button",
+      _interactive = true,
+      Dimensions = {
+        _color = "Red",
+        _height = 0.25,
+        _width = 0.25
+      },
+      Position = {
+        _y = -0.125,
+        _alignX = "Center",
+        _alignY = "Below"
+      },
+      Text = {
+        _text = "Quit Game?",
+        _color = "Black"
+      },
+      Actions = {
+        down = "Press",
+        up = "Reset",
+        click = "QuitGame",
+        abandon = "Reset",
+        over = "Excite",
+        leave = "Reset",
+      }
+    },
+    CloseContainerButton = {
+      _name = "Debug CloseContainerButton",
+      _type = "Button",
+      _interactive = true,
+      Dimensions = {
+        _relative = "Neither",
+        _height = 40,
+        _width = 40,
+        _shape = "Rounded Box",
+        _color = "Red"
+      },
+      Position = {
+        _xOffset = -20,
+        _yOffset = 20,
+        _alignX = "Right",
+        _alignY = "Up"
+      },
+      Text = {
+        _text = "X"
+      },
+      Actions = {
+        down = "Press",
+        up = "Reset",
+        click = "DeleteContainer",
+        abandon = "Reset",
+        over = "Excite",
+        leave = "Reset",
+      }
+    }
+  }
+}
 
 Kii.Container = {}
 
 function Kii.Container.create(template)
   template = template or {}
+  template.Dimensions = template.Dimensions or {}
+  template.Position = template.Position or {}
+  template.Colors = template.Colors or {}
+  template.Elements = template.Elements or {Kii.Elements.Default}
 
   local container = {
-    _type = template._type or "Text Box",
-    _shadow = template._shadow or true,
-    Dimensions = template.Dimensions or {
-      _height = 250, _width = 500
+    _name = template._name or "Default Container",
+    _type = template._type or "Default Container",
+    _text = template._text or "Default container text",
+    Dimensions = {
+      _height = template.Dimensions._height or 100,
+      _width = template.Dimensions._width or 300
     },
-    Position = template.Position or{
-      _x = 100, _y = 100
+    Position = {
+      _x = template.Position._x or 700,
+      _y = template.Position._y or 500
     },
-    Colors = template.Colors or {
-      _primary = "White",
-      _accent = "Red",
-      _detail = "Black"
+    Colors = {
+      _primary = template.Colors._primary or "White",
+      _accent = template.Colors._accent or "Red",
+      _detail = template.Colors._detail or "Black"
     },
-    Header = template.Header or {
-      _text = "Default Header", _font = "Anime_Ace"
-    },
-    Body = template.Body or {
-      _text = "Just some generic body text", _font = "Anime_Ace"
-    },
-    Elements = template.Elements or {}
+    Elements = {}
   }
 
-  if container._type == "Text Box" then
-    -- Find out if the texbox has a header
-    if container.Header then
-      -- If so create one based off of the textbox dimensions
-      local header = Kii.Element.create({
-        _name = "Text Box Header",
-        Dimensions = {_height = math.floor(container.Dimensions._height / 8),
-                      _width = math.floor(container.Dimensions._width / 3),
-                      _shape = "Text Box Header", _color = container.Colors._accent,
-                      _padding = 2, _alpha = 1},
-        Position = {_x = container.Position._x + math.floor(container.Position._x / 16),
-                    _y = container.Position._y - math.floor(container.Dimensions._height / 8) },
-        Text = {_text = container.Header._text, _font = container.Header._font,
-                _color = container.Colors._detail, _alignX = "left", _alignY = "center" }
-
-      })
-
-      table.insert(container.Elements, header)
-    end
-    -- Add the main body that holds the text
-    local body = Kii.Element.create({
-      _name = "Text Box Body",
-      Dimensions = {
-        _height = container.Dimensions._height,
-        _width = container.Dimensions._width,
-        _shape = "Box", _color = container.Colors._primary,
-        _padding = 10, _alpha = 1
-      },
-      Position = container.Position,
-      Text = {
-        _text = container.Body._text, _font = container.Body._font,
-        _color = container.Colors._detail, _alignX = "center", _alignY = "center" 
-      }
-    })
-    table.insert(container.Elements, body)
-    -- Pop in a shadow..
-    if container._shadow then
-      local shadow = Kii.Element.create({
-        _name = "Text Box Shadow Side",
-        Position = {_x = container.Position._x + container.Dimensions._width,
-                    _y = container.Position._y + 10},
-        Text = "None",
-        Dimensions = {
-          _height = container.Dimensions._height,
-          _width = 10,
-          _shape = "Box", _color = "Black",
-          _padding = 0, _alpha = 1
-        }
-      })
-      local shadow2 = Kii.Element.create({
-        _name = "Text Box Shadow Bottom",
-        Position = {_x = container.Position._x + 10,
-                    _y = container.Position._y + container.Dimensions._height},
-        Text = "None",
-        Dimensions = {
-          _height = 10,
-          _width = container.Dimensions._width - 10,
-          _shape = "Box", _color = "Black",
-          _padding = 0, _alpha = 1
-        }
-      })
-      table.insert(container.Elements, shadow)
-      table.insert(container.Elements, shadow2)
-    end
-  elseif container._type == "Button" then
-    local button = Kii.Element.create({
-      _name = container._name or "Default Button",
-      _type = container._type or "Button",
-      _interactive = container._interactive or false,
-      Dimensions = {
-        _height = 50, _width = 150,
-        _shape = "Obround", _color = "Red",
-        _padding = 10, _alpha = 1
-      },
-      Text = template.Text or {
-        _text = "I do nothing!!", _font = "Anime_Ace",
-        _color = "Black", _alignX = "center", _alignY = "center"
-      }
-    })
-    table.insert(container.Elements, button)
+  local index = 1
+  local element = nil
+  while index <= #template.Elements do
+    element = Kii.Element.create(template.Elements[index])
+    Kii.Container.formatElement(element, container)
+    table.insert(container.Elements, element)
+    index = index + 1
   end
   return container
-
 end
+
+function Kii.Container.formatElement(element, container)
+  local xOffset = element.Position._yOffset or math.floor(container.Dimensions._width * element.Position._x)
+  local yOffset = element.Position._yOffset or math.floor(container.Dimensions._height * element.Position._y)
+  -- Width adjustment
+  if element.Dimensions._relative == "Width" or element.Dimensions._relative == "Both" then
+    print(element._name)
+    xOffset = math.floor(container.Dimensions._width * element.Position._x) 
+    element.Dimensions._width = math.floor(element.Dimensions._width * container.Dimensions._width)
+  end
+  -- Height adjustment
+  if element.Dimensions._relative == "Height" or element.Dimensions._relative == "Both" then
+    element.Dimensions._height = math.floor(element.Dimensions._height * container.Dimensions._height)
+  end
+  -- X alignment
+  if element.Position._alignX ~= "Free" then
+    if element.Position._alignX == "Left" then
+      element.Position._x = container.Position._x + 
+        xOffset -- Offset
+    elseif element.Position._alignX == "Right" then
+      element.Position._x = container.Position._x + container.Dimensions._width
+        - element.Dimensions._width +
+        xOffset -- Offset
+    elseif element.Position._alignX == "Before" then
+      element.Position._x = container.Position._x - element.Dimensions._width + 
+        xOffset -- Offset
+    elseif element.Position._alignX == "After" then
+      element.Position._x = container.Position._x + container.Dimensions._width + 
+        xOffset -- Offset
+    elseif element.Position._alignX == "Center" then -- Centered
+      element.Position._x = container.Position._x + math.floor( container.Dimensions._width / 2)
+        - math.floor(element.Dimensions._width / 2) + 
+        xOffset -- Offset
+    end
+  end
+  -- Y alignment
+  if element.Position._alignY ~= "Free" then
+    if element.Position._alignY == "Up" then
+      element.Position._y = container.Position._y + 
+        yOffset  -- Offset
+    elseif element.Position._alignY == "Down" then
+      element.Position._y = container.Position._y + container.Dimensions._height
+        - element.Dimensions._height +
+        yOffset  -- Offset
+    elseif element.Position._alignY == "Above" then
+      element.Position._y = container.Position._y - element.Dimensions._height + 
+        yOffset  -- Offset
+    elseif element.Position._alignY == "Below" then
+      element.Position._y = container.Position._y + container.Dimensions._height + 
+        yOffset  -- Offset
+    else -- Centered
+      element.Position._y = container.Position._y + math.floor( container.Dimensions._height / 2)
+        - math.floor(element.Dimensions._height / 2) + 
+        yOffset  -- Offset
+    end
+  end
+  -- Coloring Body
+  if element.Dimensions._color == "Primary" then
+    element.Dimensions._color = container.Colors._primary
+  elseif element.Dimensions._color == "Accent" then
+    element.Dimensions._color = container.Colors._accent
+  elseif element.Dimensions._color == "Detail" then
+    element.Dimensions._color = container.Colors._detail
+  end
+  -- Coloring Text
+  if element.Text._color == "Primary" then
+    element.Text._color = container.Colors._primary
+  elseif element.Text._color == "Accent" then
+    element.Text._color = container.Colors._accent
+  elseif element.Text._color == "Detail" then
+    element.Text._color = container.Colors._detail
+  end
+  -- Heading configurations
+  if element._type == "Header" then
+    element.Text._text = container._name
+  elseif element._type == "Body" then
+    element.Text._text = container._text
+  end
+end
+
+function Kii.Container.updateElements(container)
+  local index = 1
+  while index <= #container.Elements do
+    if container.Elements[index]._type == "Header" then
+      container.Elements[index].Text._text = container._name
+    elseif container.Elements[index]._type == "Body" then
+      container.Elements[index].Text._text = container._text
+    end
+  end
+end
+
+
 -- Allows for moving of a container with all its elements!
 function Kii.Container.translate(container, x, y)
   local xDis = container.Position._x - x
@@ -429,48 +663,51 @@ function Kii.Container.translate(container, x, y)
   container.Position._y = y
 end
 
+Kii.Containers = {
+  Debug = {
+    _name = "Debug Container",
+    _type = "Debug Container",
+    Position = {_x = 100, _y = 100},
+    Dimensions = {
+      _height = 500,
+      _width = 1000
+    },
+    Colors = {
+      _primary = "White",
+      _accent = "Blue",
+      _detail = "Black"
+    },
+    Elements = {
+      Kii.Elements.Debug.Shadow,
+      Kii.Elements.Debug.Body,
+      Kii.Elements.Debug.Header,
+      Kii.Elements.Debug.ExitButton,
+      Kii.Elements.Debug.CloseContainerButton,
+    }
+  }
+}
+
 Kii.Scene = {}
 
 function Kii.Scene.create(template)
-  template = template or {
-    _type = "Main Menu"
+  template = template or {}
+  template.Containers = template.Containers or {Kii.Containers.Debug}
+
+  local scene = {
+    _mouseOver = template._mouseOver or nil,
+    _mouseDown = template._mouseDown or nil,
+    _mouseUp = template._mouseUp or nil,
+    Containers = {}
   }
 
-  local scene = template
+  local index = 1
+  local container = nil
 
-  scene._mouseOver = nil
-  scene._mouseDown = nil
-  scene._mouseUp = nil
-  scene.Containers = {}
-
-  if scene._type == "Main Menu" then
-    print("I got to the Main menu!")
-    local container = Kii.Container.create({
-      _name = "Quit Button",
-      _type = "Button",
-      _interactive = true,
-      Text = {
-        _text = "Quit!", _font = "Anime_Ace",
-        _color = "Black", _alignX = "center", _alignY = "center"
-      }
-    })
-    container.Elements[1].click = function(self)
-      love.event.quit()
-    end
-    container.Elements[1].over = function(self)
-      self.Animation._type = "Jitter"
-      self.Shader._type = "Lighten"
-      self.Shader._frame = 0
-    end
-    container.Elements[1].leave = function(self)
-      self.Animation._type = "None"
-      self.Shader._type = "None"
-      self.Shader._frame = 0
-    end
+  while index <= #template.Containers do
+    container = Kii.Container.create(template.Containers[index])
     table.insert(scene.Containers, container)
-
+    index = index + 1
   end
-
 
   return scene
 
@@ -483,7 +720,7 @@ function Kii.Scene.findElement(scene, x, y)
 
   while (cIndex <= #scene.Containers and returnValue == nil) do
     while (eIndex <= #scene.Containers[cIndex].Elements and returnValue == nil) do
-      if scene.Containers[cIndex].Elements[eIndex]._interactive ~= 999 then
+      if scene.Containers[cIndex].Elements[eIndex]._interactive ~= false then
         if Kii.Math.checkCollision(x, y,
           scene.Containers[cIndex].Elements[eIndex].Position._x,
           scene.Containers[cIndex].Elements[eIndex].Position._y,
@@ -503,15 +740,28 @@ function Kii.Scene.findElement(scene, x, y)
   return returnValue
 end
 
+function Kii.Scene.addContainer(scene, container)
+  table.insert(scene.Containers,container)
+end
+
+function Kii.Scene.removeContainer(scene, containerName)
+  local cIndex = 1
+  while cIndex <= #scene.Containers do
+    if scene.Containers[cIndex]._name == containerName then
+      table.remove(scene.Containers, cIndex)
+    end
+  end
+end
+
 function Kii.Scene.handleEvent(scene, event) -- down(), up(), click(), over(), leave(), abandon()
   if event[1] == "Mouse Down" then -- Calls down() on an element at x, y
     if event[2] == 1 then
-      print("Mousedown works!")
       scene._mouseDown = Kii.Scene.findElement(scene, event[3], event[4])
       if scene._mouseDown ~= nil then
-        if scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].down then
-          scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].down(scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]])
-        end
+        scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].down(
+          scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]],
+          scene.Containers[scene._mouseDown[1]],
+          scene)
       end
     end
   elseif event[1] == "Mouse Up" then -- Calls click() if down = up, else down.abandon(), up.up()
@@ -519,24 +769,29 @@ function Kii.Scene.handleEvent(scene, event) -- down(), up(), click(), over(), l
       scene._mouseUp = Kii.Scene.findElement(scene, event[3], event[4])
       if scene._mouseUp ~= nil then
         if scene._mouseDown ~= nil then
-          if scene._mouseUp[1] == scene._mouseDown[1]  and
+          if scene._mouseUp[1] == scene._mouseDown[1] and
              scene._mouseUp[2] == scene._mouseDown[2] then
-            if scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].click then
-              scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].click()
-            end
+            scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].click(
+              scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]],
+              scene.Containers[scene._mouseDown[1]],
+              scene)
+          else 
+            scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].abandon(
+              scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]],
+              scene.Containers[scene._mouseDown[1]],
+              scene)
           end
         else
-          print("Mouseup works!")
-          if scene.Containers[scene._mouseUp[1]].Elements[scene._mouseUp[2]].up then
-            scene.Containers[scene._mouseUp[1]].Elements[scene._mouseUp[2]].up()
-          end
+          scene.Containers[scene._mouseUp[1]].Elements[scene._mouseUp[2]].up(
+            scene.Containers[scene._mouseUp[1]].Elements[scene._mouseUp[2]],
+            scene.Containers[scene._mouseUp[1]],
+            scene)
         end
-      end
-      if scene._mouseDown ~= nil then
-        print("Mouse abandon works!")
-        if scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].abandon then
-          scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].abandon(scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]])
-        end
+      elseif scene._mouseDown ~= nil then
+        scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]].abandon(
+          scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]],
+          scene.Containers[scene._mouseDown[1]],
+          scene)
       end
       scene._mouseDown = nil
       scene._mouseUp = nil
@@ -547,30 +802,30 @@ function Kii.Scene.handleEvent(scene, event) -- down(), up(), click(), over(), l
       if scene._mouseOver ~= nil then
         if placeholder[1] ~= scene._mouseOver[1] and
            placeholder[2] ~= scene._mouseOver[2] then
-            print("Mouse leave works!")
-            if scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave then
-              scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave(scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]])
-            end
-            print("Mouse over works!")
-            if scene.Containers[placeholder[1]].Elements[placeholder[2]].over then
-              scene.Containers[placeholder[1]].Elements[placeholder[2]].over(scene.Containers[placeholder[1]].Elements[placeholder[2]])
-            end
+            scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave(
+              scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]],
+              scene.Containers[scene._mouseOver[1]])
+            scene.Containers[placeholder[1]].Elements[placeholder[2]].over(
+              scene.Containers[placeholder[1]].Elements[placeholder[2]],
+              scene.Containers[placeholder[1]],
+              scene)
         end
       else
-        print("Mouse over works!")
-        if scene.Containers[placeholder[1]].Elements[placeholder[2]].over then
-          scene.Containers[placeholder[1]].Elements[placeholder[2]].over(scene.Containers[placeholder[1]].Elements[placeholder[2]])
-        end
+        scene.Containers[placeholder[1]].Elements[placeholder[2]].over(
+          scene.Containers[placeholder[1]].Elements[placeholder[2]],
+          scene.Containers[placeholder[1]],
+          scene)
       end
     elseif scene._mouseOver ~= nil then
-      print("Mouse leave works!")
-      if scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave then
-        scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave(scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]])
-      end
+      scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]].leave(
+        scene.Containers[scene._mouseOver[1]].Elements[scene._mouseOver[2]],
+        scene.Containers[scene._mouseOver[1]],
+        scene)
     end
     scene._mouseOver = placeholder
   end
 end
 
+Kii.Script = {}
 
 return Kii

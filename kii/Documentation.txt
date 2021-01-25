@@ -1,0 +1,16 @@
+alignX/Y
+Free            Above
+        +-------------------+
+        |        Up         |
+        |                   |
+  Before|Left          Right|After
+        |                   |
+        |       Down        |
+        +-------------------+
+                Below
+
+Dimensions._relative
+      Width
+      Height
+      Both
+      Neither
