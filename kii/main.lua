@@ -419,6 +419,8 @@ Kii.Elements = {
         _alpha = 0.5
       },
       Position = {
+        _xOffset = 20,
+        _yOffset = 20,
         _x = 0.0625,
         _y = 0.0625,
       },
@@ -431,6 +433,7 @@ Kii.Elements = {
       _type = "Body",
       Dimensions = {
         _shape = "Box",
+        _padding = 40,
         _color = "Primary"
       },
       Text = {
@@ -558,12 +561,15 @@ function Kii.Container.create(template)
 end
 
 function Kii.Container.formatElement(element, container)
-  local xOffset = element.Position._yOffset or math.floor(container.Dimensions._width * element.Position._x)
+  local xOffset = element.Position._xOffset or math.floor(container.Dimensions._width * element.Position._x)
   local yOffset = element.Position._yOffset or math.floor(container.Dimensions._height * element.Position._y)
+  element._relativeX = element.Position._x
+  element._relativeY = element.Position._y
+  element._relativeWidth = element.Dimensions._width
+  element._relativeHeight = element.Dimensions._height
+
   -- Width adjustment
   if element.Dimensions._relative == "Width" or element.Dimensions._relative == "Both" then
-    print(element._name)
-    xOffset = math.floor(container.Dimensions._width * element.Position._x) 
     element.Dimensions._width = math.floor(element.Dimensions._width * container.Dimensions._width)
   end
   -- Height adjustment
@@ -571,7 +577,7 @@ function Kii.Container.formatElement(element, container)
     element.Dimensions._height = math.floor(element.Dimensions._height * container.Dimensions._height)
   end
   -- X alignment
-  if element.Position._alignX ~= "Free" then
+  if element.Position._alignX ~= "Free" or element.Position._alignX ~= "Resized" then
     if element.Position._alignX == "Left" then
       element.Position._x = container.Position._x + 
         xOffset -- Offset
@@ -592,7 +598,7 @@ function Kii.Container.formatElement(element, container)
     end
   end
   -- Y alignment
-  if element.Position._alignY ~= "Free" then
+  if element.Position._alignY ~= "Free" or element.Position._alignY ~= "Resized" then
     if element.Position._alignY == "Up" then
       element.Position._y = container.Position._y + 
         yOffset  -- Offset
@@ -644,6 +650,7 @@ function Kii.Container.updateElements(container)
     elseif container.Elements[index]._type == "Body" then
       container.Elements[index].Text._text = container._text
     end
+    index = index + 1
   end
 end
 
@@ -663,10 +670,18 @@ function Kii.Container.translate(container, x, y)
   container.Position._y = y
 end
 
+function Kii.Container.move(container, x, y)
+  local newX = container.Position._x + x
+  local newY = container.Position._y + y
+
+  Kii.Container.translate(container, newX, newY)
+end
+
 Kii.Containers = {
   Debug = {
     _name = "Debug Container",
     _type = "Debug Container",
+    _text = "Just some debug stuffs",
     Position = {_x = 100, _y = 100},
     Dimensions = {
       _height = 500,
@@ -687,6 +702,23 @@ Kii.Containers = {
   }
 }
 
+function Kii.Container.resize(container, width, height)
+  container.Dimensions._width = container.Dimensions._width + width
+  container.Dimensions._height = container.Dimensions._height + height
+
+  local index = 1
+  while index <= #container.Elements do
+    container.Elements[index].Position._x = container.Elements[index]._relativeX
+    container.Elements[index].Position._y = container.Elements[index]._relativeY
+    container.Elements[index].Dimensions._width = container.Elements[index]._relativeWidth
+    container.Elements[index].Dimensions._height = container.Elements[index]._relativeHeight
+
+
+    Kii.Container.formatElement(container.Elements[index], container)
+    index = index + 1
+  end
+end
+
 Kii.Scene = {}
 
 function Kii.Scene.create(template)
@@ -697,6 +729,10 @@ function Kii.Scene.create(template)
     _mouseOver = template._mouseOver or nil,
     _mouseDown = template._mouseDown or nil,
     _mouseUp = template._mouseUp or nil,
+    Text = {
+      _text = "I'd just like to interject for a moment. What you're referring to as Linux, is in fact, GNU/Linux, or as I've recently taken to calling it, GNU plus Linux. Linux is not an operating system unto itself, but rather another free component of a fully functioning GNU system made useful by the GNU corelibs, shell utilities and vital system components comprising a full OS as defined by POSIX.",
+      _frame = 0
+    },
     Containers = {}
   }
 
@@ -711,6 +747,16 @@ function Kii.Scene.create(template)
 
   return scene
 
+end
+
+function Kii.Scene.update (scene)
+  if scene.Containers ~= nil then
+    if scene.Text._frame < string.len(scene.Text._text) then
+      scene.Text._frame = scene.Text._frame + 1
+      scene.Containers[1]._text = string.sub(scene.Text._text, 0, scene.Text._frame)
+      Kii.Container.updateElements(scene.Containers[1])
+    end
+  end
 end
 
 function Kii.Scene.findElement(scene, x, y)
