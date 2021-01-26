@@ -20,7 +20,7 @@ end
 -- All things related to actually rendering the game!
 Kii.Render = {
   Fonts = {
-    Anime_Ace = love.graphics.newFont("kii/media/anime-ace.regular.ttf")
+    Anime_Ace = love.graphics.newFont("kii/media/anime-ace.regular.ttf", 20)
   },
   Palette = {
     Tauriel = { -- https://lospec.com/palette-list/tauriel-16
@@ -677,10 +677,27 @@ function Kii.Container.move(container, x, y)
   Kii.Container.translate(container, newX, newY)
 end
 
+function Kii.Container.resize(container, width, height)
+  container.Dimensions._width = container.Dimensions._width + width
+  container.Dimensions._height = container.Dimensions._height + height
+
+  local index = 1
+  while index <= #container.Elements do
+    container.Elements[index].Position._x = container.Elements[index]._relativeX
+    container.Elements[index].Position._y = container.Elements[index]._relativeY
+    container.Elements[index].Dimensions._width = container.Elements[index]._relativeWidth
+    container.Elements[index].Dimensions._height = container.Elements[index]._relativeHeight
+
+
+    Kii.Container.formatElement(container.Elements[index], container)
+    index = index + 1
+  end
+end
+
 Kii.Containers = {
   Debug = {
     _name = "Debug Container",
-    _type = "Debug Container",
+    _type = "Text Box",
     _text = "Just some debug stuffs",
     Position = {_x = 100, _y = 100},
     Dimensions = {
@@ -702,38 +719,31 @@ Kii.Containers = {
   }
 }
 
-function Kii.Container.resize(container, width, height)
-  container.Dimensions._width = container.Dimensions._width + width
-  container.Dimensions._height = container.Dimensions._height + height
-
-  local index = 1
-  while index <= #container.Elements do
-    container.Elements[index].Position._x = container.Elements[index]._relativeX
-    container.Elements[index].Position._y = container.Elements[index]._relativeY
-    container.Elements[index].Dimensions._width = container.Elements[index]._relativeWidth
-    container.Elements[index].Dimensions._height = container.Elements[index]._relativeHeight
-
-
-    Kii.Container.formatElement(container.Elements[index], container)
-    index = index + 1
-  end
-end
-
 Kii.Scene = {}
 
 function Kii.Scene.create(template)
   template = template or {}
   template.Containers = template.Containers or {Kii.Containers.Debug}
+  template.Script = template.Script or {}
+  template.Text = template.Text or {}
 
   local scene = {
     _mouseOver = template._mouseOver or nil,
     _mouseDown = template._mouseDown or nil,
     _mouseUp = template._mouseUp or nil,
-    Text = {
-      _text = "I'd just like to interject for a moment. What you're referring to as Linux, is in fact, GNU/Linux, or as I've recently taken to calling it, GNU plus Linux. Linux is not an operating system unto itself, but rather another free component of a fully functioning GNU system made useful by the GNU corelibs, shell utilities and vital system components comprising a full OS as defined by POSIX.",
-      _frame = 0
+    _historyLength = 20, -- How many lines back the history can remember
+    Script = {
+      _current = template.Script._current or "Debug",
+      _index = template.Script._index or 1
     },
-    Containers = {}
+    Text = {
+      _speaker = template.Text._speaker or "Default Speaker",
+      _text = template.Text._text or "Default Text",
+      _frame = template.Text._frame or 0,
+      _textBox = nil
+    },
+    Containers = {},
+    History = {}
   }
 
   local index = 1
@@ -741,22 +751,37 @@ function Kii.Scene.create(template)
 
   while index <= #template.Containers do
     container = Kii.Container.create(template.Containers[index])
+    if container._type == "Text Box" then scene.Text._textBox = index end
     table.insert(scene.Containers, container)
     index = index + 1
   end
+
+  Kii.Script.lookUp(scene.Script._current, scene.Script._index, scene)
 
   return scene
 
 end
 
 function Kii.Scene.update (scene)
-  if scene.Containers ~= nil then
+  -- Text handling
+  if scene.Text._textBox ~= nil then
     if scene.Text._frame < string.len(scene.Text._text) then
       scene.Text._frame = scene.Text._frame + 1
-      scene.Containers[1]._text = string.sub(scene.Text._text, 0, scene.Text._frame)
-      Kii.Container.updateElements(scene.Containers[1])
+      scene.Containers[scene.Text._textBox]._text = string.sub(scene.Text._text, 0, scene.Text._frame)
+      Kii.Container.updateElements(scene.Containers[scene.Text._textBox])
     end
   end
+end
+
+function Kii.Scene.advance (scene)
+  scene.Script._index = scene.Script._index + 1
+  Kii.Script.lookUp(scene.Script._current, scene.Script._index, scene)
+end
+
+function Kii.Scene.goTo(scene, script, index)
+  scene.Script._index = index
+  scene.Script._current = script
+  Kii.Script.lookUp(script, index, scene)
 end
 
 function Kii.Scene.findElement(scene, x, y)
@@ -794,6 +819,7 @@ function Kii.Scene.removeContainer(scene, containerName)
   local cIndex = 1
   while cIndex <= #scene.Containers do
     if scene.Containers[cIndex]._name == containerName then
+      if scene.Containers[cIndex]._type == "Text Box" then scene.Text._textBox = nil end
       table.remove(scene.Containers, cIndex)
     end
   end
@@ -808,6 +834,13 @@ function Kii.Scene.handleEvent(scene, event) -- down(), up(), click(), over(), l
           scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]],
           scene.Containers[scene._mouseDown[1]],
           scene)
+      end
+    elseif event[2] == 2 then
+      local index = 1
+      print("Printing history!")
+      while index <= #scene.History do
+        print(scene.History[index])
+        index = index + 1
       end
     end
   elseif event[1] == "Mouse Up" then -- Calls click() if down = up, else down.abandon(), up.up()
@@ -838,6 +871,12 @@ function Kii.Scene.handleEvent(scene, event) -- down(), up(), click(), over(), l
           scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]],
           scene.Containers[scene._mouseDown[1]],
           scene)
+      else
+        if scene.Text._frame < string.len(scene.Text._text) then
+          scene.Text._frame = string.len(scene.Text._text) - 1
+        else
+          Kii.Scene.advance(scene)
+        end
       end
       scene._mouseDown = nil
       scene._mouseUp = nil
@@ -872,6 +911,76 @@ function Kii.Scene.handleEvent(scene, event) -- down(), up(), click(), over(), l
   end
 end
 
-Kii.Script = {}
+function Kii.Scene.addToHistory(scene, text)
+  table.insert(scene.History, text)
+  if #scene.History > scene._historyLength then
+    table.remove(scene.History, 1)
+  end
+end
+
+function Kii.Scene.changeText(scene, text, style)
+  style = style or "Spoken"
+  if style == "Spoken" then
+    text = '"'..text..'"'
+  elseif style == "Action" then
+    text = "*"..text.."*"
+  else
+    -- Placeholder
+  end
+  Kii.Scene.addToHistory(scene,text)
+  scene.Text._text = text
+  scene.Text._frame = 0
+end
+
+function Kii.Scene.changeSpeaker(scene, text)
+  Kii.Scene.addToHistory(scene, text..":")
+  if scene.Text._textBox ~= nil then
+    scene.Containers[scene.Text._textBox]._name = text
+  end
+  Kii.Scene.advance(scene)
+end
+
+Kii.Script = {
+  Debug = {
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "System"
+      )
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+        "THIS IS A BIT OF DEFAULT TEXT", "None"
+      )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Kiinyo"
+      )
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+        "Looks like we've got it all working now!"
+      )
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "Looping back to the start now..."
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "Presses a few buttons", "Action"
+    )
+    end,
+    function (scene)
+      Kii.Scene.goTo(scene, "Debug", 1)
+    end
+  }
+}
+
+function Kii.Script.lookUp(script, index, scene)
+  Kii.Script[script][index](scene)
+  Kii.Scene.update(scene)
+end
 
 return Kii
