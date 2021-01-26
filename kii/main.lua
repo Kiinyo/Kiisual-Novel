@@ -16,6 +16,22 @@ Kii.Math = {
   end
 }
 
+Kii.Util = {
+  parseText = function (texts)
+    local index = 1
+    local text = ""
+    while index <= #texts do
+      if texts[index]:sub(1, 1) == '"' then   
+        text = text.."\n".."    "..texts[index]
+      else
+        text = text.."\n".."\n"..texts[index]
+      end
+      index = index + 1
+    end
+    return text
+  end
+}
+
 -- All things related to actually rendering the game!
 Kii.Render = {
   Fonts = {
@@ -269,6 +285,17 @@ Kii.Render = {
   end
 }
 
+Kii.Audio = {
+  SFX = {
+    Generic = love.audio.newSource("kii/media/audio/sfx/Generic.wav", "static"),
+    Generic_Male = love.audio.newSource("kii/media/audio/sfx/Generic_Male.wav", "static"),
+    Generic_Female = love.audio.newSource("kii/media/audio/sfx/Generic_Female.wav", "static")
+  },
+  playSFX = function (sfx)
+    Kii.Audio.SFX[sfx]:play()
+  end
+}
+
 Kii.Element = {
   create = function (template)
     template = template or {}
@@ -498,6 +525,19 @@ Kii.Elements = {
       Text = {
         _text = "@None"
       }
+    },
+    History = {
+      _name = "Simple History Box",
+      _type = "Body",
+      Dimensions = {
+        _shape = "Rounded Box",
+        _alpha = 0.75,
+        _color = "Primary"
+      },
+      Text = {
+        _text = "@None",
+        _alignX = "left"
+      }
     }
   }
 }
@@ -690,7 +730,7 @@ Kii.Container = {
       index = index + 1
     end
   end,
-  applyShader = function (container, Shader)
+  applyShader = function (container, Shader, frame)
     local index = 1
     while index <= #container.Elements do
       container.Elements[index].Shader._type = Shader
@@ -739,6 +779,25 @@ Kii.Containers = {
       Elements = {
         Kii.Elements.Simple.Box
       }
+    },
+    History = {
+      _name = "Simple History",
+      _type = "Body",
+      Dimensions = {
+        _height = 640,
+        _width = 500
+      },
+      Position = {
+        _x = 640 - 250,
+        _y = 40
+      },
+      Colors = {
+        _primary = "Black",
+        _detail = "White"
+      },
+      Elements = {
+        Kii.Elements.Simple.History
+      }
     }
   }
 }
@@ -749,13 +808,19 @@ Kii.Scene = {
     template.Containers = template.Containers or {Kii.Containers.Debug}
     template.Script = template.Script or {}
     template.Text = template.Text or {}
+    template.Audio = template.Audio or {}
+    template.History = template.History or {}
   
     local scene = {
       _mouseOver = template._mouseOver or nil,
       _mouseDown = template._mouseDown or nil,
       _mouseUp = template._mouseUp or nil,
+      _pause = template._pause or nil,
       _id = template._id or 1, -- Gives every container an ID
-      _historyLength = 20, -- How many lines back the history can remember
+      History = {
+        _length = template.History._length or 15, -- How many lines back the history can remember
+        Log = template.History.Log or {}
+      },
       Script = {
         _current = template.Script._current or "Debug",
         _index = template.Script._index or 1
@@ -766,9 +831,13 @@ Kii.Scene = {
         _frame = template.Text._frame or 0,
         _textBox = nil
       },
+      Audio = {
+        _voice = nil, -- " voice " in airquotes, it's the SFX made during dialogue
+        _bgm = nil -- " self explanitory"
+      },
       Containers = {},
-      History = {},
-      Flags = {}
+      Flags = {},
+
     }
   
     local index = 1
@@ -785,11 +854,15 @@ Kii.Scene = {
     return scene
   
   end,
+  displayHistory = function (scene)
+
+  end,
   update = function (scene)
     -- Text handling
-    if scene.Text._textBox ~= nil then
+    if scene.Text._textBox ~= nil and scene._pause == nil then
       local index = Kii.Scene.findIndex(scene, scene.Text._textBox)
       if scene.Text._frame < string.len(scene.Text._text) then
+        Kii.Scene.playVoice(scene)
         scene.Text._frame = scene.Text._frame + 1
         scene.Containers[index]._text = string.sub(scene.Text._text, 0, scene.Text._frame)
         Kii.Container.updateElements(scene.Containers[index])
@@ -804,6 +877,9 @@ Kii.Scene = {
     scene.Script._index = index
     scene.Script._current = script
     Kii.Script.lookUp(script, index, scene)
+  end,
+  playVoice = function (scene)
+    if scene.Audio._voice ~= nil then Kii.Audio.playSFX(scene.Audio._voice)end
   end,
   findElement = function (scene, x, y)
     local cIndex = 1
@@ -842,6 +918,7 @@ Kii.Scene = {
       print(container._name)
       table.insert(scene.Containers,container)
     end
+    return container._id
   end,
   addFlag = function (scene, flag, contents)
     scene.Flags[flag] = contents
@@ -882,11 +959,24 @@ Kii.Scene = {
             scene)
         end
       elseif event[2] == 2 then
-        local index = 1
-        print("Printing history!")
-        while index <= #scene.History do
-          print(scene.History[index])
-          index = index + 1
+        if scene._pause == nil then
+          local hisCon = Kii.Container.create(Kii.Containers.Simple.History)
+          scene._pause = "History"
+          hisCon._text = Kii.Util.parseText(scene.History.Log)
+
+          Kii.Container.updateElements(hisCon)
+
+          Kii.Scene.addFlag(scene, "History", Kii.Scene.addContainer(scene, hisCon, "Front"))
+
+          local index = 1
+          print("Printing history!")
+          while index <= #scene.History.Log do
+            print(scene.History.Log[index])
+            index = index + 1
+          end
+        elseif scene._pause == "History" then
+          scene._pause = nil
+          Kii.Scene.removeContainer(scene, Kii.Scene.removeFlag(scene, "History"))
         end
       end
     elseif event[1] == "Mouse Up" then -- Calls click() if down = up, else down.abandon(), up.up()
@@ -917,7 +1007,7 @@ Kii.Scene = {
             scene.Containers[scene._mouseDown[1]].Elements[scene._mouseDown[2]],
             scene.Containers[scene._mouseDown[1]],
             scene)
-        else
+        elseif scene._pause == nil then
           if scene.Text._frame < string.len(scene.Text._text) then
             scene.Text._frame = string.len(scene.Text._text) - 1
           else
@@ -957,9 +1047,9 @@ Kii.Scene = {
     end
   end,
   addToHistory = function (scene, text)
-    table.insert(scene.History, text)
-    if #scene.History > scene._historyLength then
-      table.remove(scene.History, 1)
+    table.insert(scene.History.Log, text)
+    if #scene.History.Log > scene.History._length then
+      table.remove(scene.History.Log, 1)
     end
   end,
   changeText = function (scene, text, style)
@@ -975,13 +1065,14 @@ Kii.Scene = {
     scene.Text._text = text
     scene.Text._frame = 0
   end,
-  changeSpeaker = function (scene, text)
-    Kii.Scene.addToHistory(scene, text..":")
+  changeSpeaker = function (scene, text, voice)
+    voice = voice or nil
+    if text ~= "" then Kii.Scene.addToHistory(scene, text..":") end
     if scene.Text._textBox ~= nil then
       local index = Kii.Scene.findIndex(scene, scene.Text._textBox)
       scene.Containers[index]._name = text
+      scene.Audio._voice = voice
     end
-    Kii.Scene.advance(scene)
   end
 }
 
@@ -998,6 +1089,7 @@ Kii.Scripts = {
       Kii.Scene.changeSpeaker(scene,
         "OS"
       )
+      Kii.Scene.advance(scene)
     end,
     function (scene)
       Kii.Scene.changeText(scene,
@@ -1006,8 +1098,9 @@ Kii.Scripts = {
     end,
     function (scene)
       Kii.Scene.changeSpeaker(scene,
-        "Kiinyo"
+        "Kiinyo", "Generic_Female"
       )
+      Kii.Scene.advance(scene)
     end,
     function (scene)
       Kii.Scene.changeText(scene,
@@ -1035,6 +1128,12 @@ Kii.Scripts = {
       )
     end,
     function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "", "Generic"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
       Kii.Scene.changeText(scene,
         "Clackety Clack", "Action"
       )
@@ -1050,6 +1149,12 @@ Kii.Scripts = {
       Kii.Container.translate(scene.Containers[textbox], x, y)
       Kii.Scene.advance(scene)
       
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Kiinyo", "Generic_Female"
+      )
+      Kii.Scene.advance(scene)
     end,
     function (scene)
       Kii.Scene.changeText(scene,
@@ -1070,17 +1175,144 @@ Kii.Scripts = {
     end,
     function (scene)
       Kii.Scene.changeText(scene,
-      "There we go!"
+      "Awesome!"
     )
     end,
     function (scene)
       Kii.Scene.changeText(scene,
-      "Time to loop back to the start..."
+      "Now I just need to make sure the audio works..."
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "Allie can you come here for a minute?"
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Alistair", "Generic_Male"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "?"
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Kiinyo", "Generic_Female"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "Would you mind saying a few lines to see if this thing is working?"
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Alistair", "Generic_Male"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "Like what?"
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Kiinyo", "Generic_Female"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "I dunno, anything, I just need to make sure this thing works!"
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Alistair", "Generic_Male"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "A"
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Kiinyo", "Generic_Female"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "..."
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Alistair", "Generic_Male"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "..."
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Kiinyo", "Generic_Female"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "Well thank you for your help."
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Alistair", "Generic_Male"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "Any time."
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeSpeaker(scene,
+        "Kiinyo", "Generic_Female"
+      )
+      Kii.Scene.advance(scene)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "With that out of the way I think I can go ahead and reset this thing to make sure everything loops."
+    )
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "Just a few buttons here..."
     )
     end,
     function (scene)
       local bgid = Kii.Scene.removeFlag(scene, "Background Added")
       Kii.Scene.removeContainer(scene, bgid)
+    end,
+    function (scene)
+      Kii.Scene.changeText(scene,
+      "Reset the text box..."
+    )
+    end,
+    function (scene)
       local width = Kii.Scene.removeFlag(scene, "Former Width")
       local height = Kii.Scene.removeFlag(scene, "Former Height")
       local textbox = scene.Text._textBox
@@ -1091,7 +1323,7 @@ Kii.Scripts = {
     end,
     function (scene)
       Kii.Scene.changeText(scene,
-      "Runs a few functions...", "Action"
+      "And that should be everything!"
     )
     end,
     function (scene)
