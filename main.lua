@@ -1,7 +1,7 @@
 local Kii = require "kii/main"
 
 function love.load()
-  love.graphics.setBackgroundColor(Kii.Render.colorFind("Yellow"))
+  love.graphics.setBackgroundColor(Kii.Render.colorFind("Black"))
   love.keyboard.setKeyRepeat(false)
   love.window.setMode(1280, 720, {msaa = 4})
   scene = Kii.Scene.create()
