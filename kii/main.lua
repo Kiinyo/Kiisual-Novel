@@ -5,14 +5,19 @@ local Kii = {
 -- A list of math stuff I'm too lazy to look up
 Kii.Math = {
   clamp = function(value, min, max)
-    local value = math.min(math.max(value, min), max)
-    return value
+    return math.min(math.max(value, min), max)
   end,
   checkCollision = function(x, y, tX, tY, tW, tH)
     return (
       x >= tX and x <= tX + tW and
       y >= tY and y <= tY + tH
     )
+  end,
+  lerp = function (origin, target, time)
+    return math.floor(origin + ((target - origin) / time))
+  end,
+  ease = function (origin, target, time)
+    return math.floor(origin + ((target - origin) / 2))
   end
 }
 
@@ -35,7 +40,7 @@ Kii.Util = {
 -- All things related to actually rendering the game!
 Kii.Render = {
   Fonts = {
-    Anime_Ace = love.graphics.newFont("kii/media/anime-ace.regular.ttf", 20)
+    Anime_Ace = love.graphics.newFont("kii/media/anime-ace.regular.ttf", 18)
   },
   Palette = {
     Tauriel = { -- https://lospec.com/palette-list/tauriel-16
@@ -520,7 +525,8 @@ Kii.Elements = {
       _name = "Simple Box",
       _type = "Simple",
       Dimensions = {
-        _shape = "Box"
+        _shape = "Box",
+        _color = "Primary"
       },
       Text = {
         _text = "@None"
@@ -549,6 +555,8 @@ Kii.Container = {
     template.Position = template.Position or {}
     template.Colors = template.Colors or {}
     template.Elements = template.Elements or {Kii.Elements.Default}
+    template.Resize = template.Resize or {}
+    template.Reposition = template.Reposition or {}
   
     local container = {
       _name = template._name or "Default Container",
@@ -566,7 +574,20 @@ Kii.Container = {
       Colors = {
         _primary = template.Colors._primary or "White",
         _accent = template.Colors._accent or "Red",
-        _detail = template.Colors._detail or "Black"
+        _detail = template.Colors._detail or "Black",
+        _speaker = template.Colors._speaker or "White",
+      },
+      Resize = {
+        _type = template.Resize._type or "None",
+        _frame = template.Resize._frame or 0,
+        _targetWidth = template.Resize._targetWidth or 0,
+        _targetHeight = template.Resize._targetHeight or 0
+      },
+      Reposition = {
+        _type = template.Reposition._type or "None",
+        _frame = template.Reposition._frame or 0,
+        _targetX = template.Reposition._targetX or 0,
+        _targetY = template.Reposition._targetY or 0
       },
       Elements = {}
     }
@@ -669,13 +690,16 @@ Kii.Container = {
     while index <= #container.Elements do
       if container.Elements[index]._type == "Header" then
         container.Elements[index].Text._text = container._name
+        container.Elements[index].Text._color = container.Colors._speaker
       elseif container.Elements[index]._type == "Body" then
         container.Elements[index].Text._text = container._text
       end
       index = index + 1
     end
   end,
-  translate = function (container, x, y)
+
+  -- Place the container at x, y
+  setPosition = function (container, x, y)
     local xDis = container.Position._x - x
     local yDis = container.Position._y - y
   
@@ -688,15 +712,60 @@ Kii.Container = {
     container.Position._x = x
     container.Position._y = y
   end,
-  move = function (container, x, y)
-    local newX = container.Position._x + x
-    local newY = container.Position._y + y
-  
-    Kii.Container.translate(container, newX, newY)
+  -- Translation function animation
+  reposition = function (container)
+    if container.Reposition._type ~= "None" then
+      if container.Reposition._frame <= 0 then
+        -- Make sure the animation is finished
+        Kii.Container.setPosition(
+          container,
+          container.Reposition._targetX,
+          container.Reposition._targetY
+        )
+        container.Reposition = {
+          _type = "None",
+          _frame = 0,
+          _targetX = container.Position._x,
+          _targetY = container.Position._y
+        }
+      else
+        local tween = "lerp"
+        if container.Reposition._type == "Linear" then
+          tween = 'lerp'
+        elseif container.Reposition._type == "Ease" then
+          tween = 'ease'
+        end
+
+        Kii.Container.setPosition(
+          container,
+          Kii.Math[tween](
+            container.Position._x,
+            container.Reposition._targetX,
+            container.Reposition._frame
+          ),
+          Kii.Math[tween](
+            container.Position._y,
+            container.Reposition._targetY,
+            container.Reposition._frame
+          )
+        )
+
+        container.Reposition._frame = container.Reposition._frame - 1
+      end
+    end
   end,
-  resize = function (container, width, height)
-    container.Dimensions._width = container.Dimensions._width + width
-    container.Dimensions._height = container.Dimensions._height + height
+  -- Ordering the actual animation
+  move = function (container, x, y, time, type)
+    container.Reposition._type = type or "Linear"
+    container.Reposition._targetX = x or 0
+    container.Reposition._targetY = y or 0
+    container.Reposition._frame = time or 10
+  end,
+
+  -- Set the container's width and height
+  setDimensions = function (container, width, height)
+    container.Dimensions._width = width
+    container.Dimensions._height =  height
   
     local index = 1
     while index <= #container.Elements do
@@ -710,11 +779,55 @@ Kii.Container = {
       index = index + 1
     end
   end,
-  setDimensions = function (container, width, height)
-    width = width - container.Dimensions._width
-    height = height - container.Dimensions._height
-    Kii.Container.resize(container, width, height)
+  -- Scaling function animation
+  resize = function (container)
+    if container.Resize._type ~= "None" then
+      if container.Resize._frame <= 0 then
+        -- Make sure the animation is finished
+        Kii.Container.setDimensions(
+          container,
+          container.Resize._targetWidth,
+          container.Resize._targetHeight
+        )
+        container.Resize = {
+          _type = "None",
+          _frame = 0,
+          _targetWidth = container.Dimensions._width,
+          _targetHeight = container.Dimensions._height
+        }
+      else
+        local tween = "lerp"
+        if container.Resize._type == "Linear" then
+          tween = 'lerp'
+        end
+
+        Kii.Container.setDimensions(
+          container,
+          Kii.Math[tween](
+            container.Dimensions._width,
+            container.Resize._targetWidth,
+            container.Resize._frame
+          ),
+          Kii.Math[tween](
+            container.Dimensions._height,
+            container.Resize._targetHeight,
+            container.Resize._frame
+          )
+        )
+
+        container.Resize._frame = container.Resize._frame - 1
+
+      end
+    end
   end,
+  -- Ordering the actual animation
+  scale = function (container, width, height, time, type)
+    container.Resize._type = type or "Linear"
+    container.Resize._targetWidth = width or 100
+    container.Resize._targetHeight = height or 100
+    container.Resize._frame = time or 10
+  end,
+
   recolor = function (container, color)
     local index = 1
     while index <= #container.Elements do
@@ -762,24 +875,6 @@ Kii.Containers = {
     }
   },
   Simple = {
-    Background = {
-      _name = "Simple Background",
-      _type = "Background",
-      Position = {
-        _x = 0,
-        _y = 0
-      },
-      Dimensions = {
-        _height = 720,
-        _width = 1280
-      },
-      Color = {
-        _primary = "Blue"
-      },
-      Elements = {
-        Kii.Elements.Simple.Box
-      }
-    },
     History = {
       _name = "Simple History",
       _type = "Body",
@@ -799,6 +894,26 @@ Kii.Containers = {
         Kii.Elements.Simple.History
       }
     }
+  },
+  Backgrounds = {
+    Simple = {
+      _name = "Simple Background",
+      _type = "Background",
+      Position = {
+        _x = 0,
+        _y = 0
+      },
+      Dimensions = {
+        _height = 720,
+        _width = 1280
+      },
+      Colors = {
+        _primary = "Yellow"
+      },
+      Elements = {
+        Kii.Elements.Simple.Box
+      }
+    },
   }
 }
 
@@ -810,6 +925,7 @@ Kii.Scene = {
     template.Text = template.Text or {}
     template.Audio = template.Audio or {}
     template.History = template.History or {}
+    template.Visual = template.Visual or {}
   
     local scene = {
       _mouseOver = template._mouseOver or nil,
@@ -832,8 +948,12 @@ Kii.Scene = {
         _textBox = nil
       },
       Audio = {
-        _voice = nil, -- " voice " in airquotes, it's the SFX made during dialogue
-        _bgm = nil -- " self explanitory"
+        _voice = template.Audio._voice or nil, -- " voice " in airquotes, it's the SFX made during dialogue
+        _bgm = template.Audio._bgm or nil -- " self explanitory"
+      },
+      Visual = {
+        _bg = template.Visual._bg or nil,
+        Sprites = template.Visual.Sprites or {}
       },
       Containers = {},
       Flags = {},
@@ -858,15 +978,27 @@ Kii.Scene = {
 
   end,
   update = function (scene)
-    -- Text handling
-    if scene.Text._textBox ~= nil and scene._pause == nil then
-      local index = Kii.Scene.findIndex(scene, scene.Text._textBox)
-      if scene.Text._frame < string.len(scene.Text._text) then
-        Kii.Scene.playVoice(scene)
-        scene.Text._frame = scene.Text._frame + 1
-        scene.Containers[index]._text = string.sub(scene.Text._text, 0, scene.Text._frame)
-        Kii.Container.updateElements(scene.Containers[index])
+    if scene._pause == nil then
+      -- Text handling
+      if scene.Text._textBox ~= nil then
+        local index = Kii.Scene.findIndex(scene, scene.Text._textBox)
+        if scene.Text._frame < string.len(scene.Text._text) then
+          Kii.Scene.playVoice(scene)
+          scene.Text._frame = scene.Text._frame + 1
+          scene.Containers[index]._text = string.sub(scene.Text._text, 0, scene.Text._frame)
+          Kii.Container.updateElements(scene.Containers[index])
+        end
       end
+      -- Container Animations
+      local index = 1
+      while index <= #scene.Containers do
+
+        Kii.Container.resize(scene.Containers[index])
+        Kii.Container.reposition(scene.Containers[index])
+
+        index = index + 1
+      end
+
     end
   end,
   advance = function (scene)
@@ -908,16 +1040,23 @@ Kii.Scene = {
     return returnValue
   end,
   addContainer = function (scene, container, position)
-    position = position or "Behind"
     scene._id = scene._id + 1
     container._id = scene._id + 0
-    if container._type == "Text Box" then scene.Text._textBox = container._id end
-    if position == "Behind" then
-      table.insert(scene.Containers, 1, container)
+    if container._type == "Text Box" then 
+      scene.Text._textBox = container._id
+      position = position or #scene.Containers + 1
+    elseif container._type == "Background" then
+      scene.Visual._bg = container._id
+      position = position or 1
     else
-      print(container._name)
-      table.insert(scene.Containers,container)
+      if scene.Text._textBox then
+        position = position or #scene.Containers
+      else
+        position = position or #scene.Containers + 1
+      end
     end
+
+    table.insert(scene.Containers, position, container)
     return container._id
   end,
   addFlag = function (scene, flag, contents)
@@ -946,6 +1085,9 @@ Kii.Scene = {
 
   end,
   removeContainer = function (scene, ID)
+    if ID == scene.Text._textBox then
+      scene.Text._textBox = nil
+    end
     table.remove(scene.Containers, Kii.Scene.findIndex(scene, ID))
   end,
   handleEvent = function (scene, event) -- down(), up(), click(), over(), leave(), abandon()
@@ -1065,275 +1207,112 @@ Kii.Scene = {
     scene.Text._text = text
     scene.Text._frame = 0
   end,
-  changeSpeaker = function (scene, text, voice)
+  changeSpeaker = function (scene, text, voice, color)
     voice = voice or nil
+    color = color or "Blue"
     if text ~= "" then Kii.Scene.addToHistory(scene, text..":") end
     if scene.Text._textBox ~= nil then
       local index = Kii.Scene.findIndex(scene, scene.Text._textBox)
       scene.Containers[index]._name = text
+      scene.Containers[index].Colors._speaker = color
       scene.Audio._voice = voice
     end
   end
 }
 
 Kii.Script = {
+  Characters = {
+    Kiinyo = {
+      _color = "White",
+      _voice = "Generic_Female"
+    },
+    Alistair = {
+      _color = "Red",
+      _voice = "Generic_Male"
+    },
+    System = {
+      _color = "Black",
+      _voice = "Generic"
+    },
+    None = {
+      _color = "White",
+      _voice = "Generic"
+    }
+  },
   lookUp = function (script, index, scene)
     Kii.Scripts[script][index](scene)
     Kii.Scene.update(scene)
   end
 }
 
+K = {
+  -- (n)ext frame
+  n = function (s)
+    Kii.Scene.advance(s)
+  end,
+  -- Shorthand to (c)hange (s)peaker
+  cs = function (s, Speaker, text, style)
+    Kii.Scene.changeSpeaker(
+      s,
+      Speaker,
+      Kii.Script.Characters[Speaker]._voice,
+      Kii.Script.Characters[Speaker]._color
+    )
+    if text then K.nl(s, text, style) else
+      Kii.Scene.advance(s)
+    end
+  end,
+  -- Shorthand for (n)ew (l)ine
+  nl = function (s, text, style)
+    style = style or nil
+    Kii.Scene.changeText(s, text, style)
+  end,
+  -- Shorthand to (g)o (t)o line
+  gt = function (s, script, line)
+    Kii.Scene.goTo(s, script, line)
+  end,
+  -- Shorthand to (s)et (B)ack(G)round
+  sBG = function (s, BG, animation)
+    BG = Kii.Container.create(Kii.Containers.Backgrounds[BG])
+
+    if s.Visual._bg then
+      if animation then
+        -- Figure this out later
+      else
+        Kii.Scene.removeContainer(s, s.Visual._bg)
+        Kii.Scene.addContainer(s, BG)
+      end
+    end
+
+    Kii.Scene.addContainer(s, BG)
+
+  end,
+  -- (p)osition (T)ext(B)ox
+  pTB = function (s, x, y, time, type)
+    Kii.Container.move(s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)], x, y, time, type)
+  end,
+  -- (s)cale (T)ext(B)ox
+  sTB = function (s, width, height, time, type)
+    Kii.Container.scale(s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)], width, height, time, type)
+  end
+
+}
+
 Kii.Scripts = {
   Debug = {
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "OS"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-        "--NOW ENTERING KIINYO'S VN TECH DEMO--", "None"
-      )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Kiinyo", "Generic_Female"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-        "Hello? Is this thing on?"
-      )
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-        "Oh hey, it works!"
-      )
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-        "Hey there it's very nice to meet you!"
-      )
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-        "I'm glad I finally got this working!"
-      )
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-        "Although before we get started, let's fix this awful text box!"
-      )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "", "Generic"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-        "Clackety Clack", "Action"
-      )
-    end,
-    function (scene)
-      local textbox = scene.Text._textBox
-      textbox = Kii.Scene.findIndex(scene, textbox)
-      Kii.Scene.addFlag(scene, "Former Width", scene.Containers[textbox].Dimensions._width)
-      Kii.Scene.addFlag(scene, "Former Height", scene.Containers[textbox].Dimensions._height)
-      Kii.Container.setDimensions(scene.Containers[textbox], 1200, 250)
-      local x = math.floor(love.graphics.getWidth() / 2) - 600
-      local y = love.graphics.getHeight() - 280
-      Kii.Container.translate(scene.Containers[textbox], x, y)
-      Kii.Scene.advance(scene)
-      
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Kiinyo", "Generic_Female"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-        "There we go!"
-      )
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-        "Now how about the lights, I can barely see anything!"
-      )
-    end,
-    function (scene)
-      local container = Kii.Container.create(Kii.Containers.Simple.Background)
-      Kii.Container.applyShader(container, "Fade In")
-      Kii.Container.recolor(container, "Yellow")
-      Kii.Scene.addContainer(scene, container)
-      Kii.Scene.addFlag(scene, "Background Added", scene._id)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "Awesome!"
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "Now I just need to make sure the audio works..."
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "Allie can you come here for a minute?"
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Alistair", "Generic_Male"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "?"
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Kiinyo", "Generic_Female"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "Would you mind saying a few lines to see if this thing is working?"
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Alistair", "Generic_Male"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "Like what?"
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Kiinyo", "Generic_Female"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "I dunno, anything, I just need to make sure this thing works!"
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Alistair", "Generic_Male"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "A"
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Kiinyo", "Generic_Female"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "..."
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Alistair", "Generic_Male"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "..."
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Kiinyo", "Generic_Female"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "Well thank you for your help."
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Alistair", "Generic_Male"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "Any time."
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeSpeaker(scene,
-        "Kiinyo", "Generic_Female"
-      )
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "With that out of the way I think I can go ahead and reset this thing to make sure everything loops."
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "Just a few buttons here..."
-    )
-    end,
-    function (scene)
-      local bgid = Kii.Scene.removeFlag(scene, "Background Added")
-      Kii.Scene.removeContainer(scene, bgid)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "Reset the text box..."
-    )
-    end,
-    function (scene)
-      local width = Kii.Scene.removeFlag(scene, "Former Width")
-      local height = Kii.Scene.removeFlag(scene, "Former Height")
-      local textbox = scene.Text._textBox
-      textbox = Kii.Scene.findIndex(scene, textbox)
-      Kii.Container.setDimensions(scene.Containers[textbox], width, height)
-      Kii.Container.translate(scene.Containers[textbox],100, 100)
-      Kii.Scene.advance(scene)
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "And that should be everything!"
-    )
-    end,
-    function (scene)
-      Kii.Scene.changeText(scene,
-      "See you next time!"
-    )
-    end,
-    function (scene)
-      Kii.Scene.goTo(scene, "Debug", 1)
-    end
+    function (s) K.cs(s,"System", "NOW ENTERING KIINYO'S VN TECH DEMO", "None") end,
+    function (s) K.cs(s,"Kiinyo", "Hello, is this thing on?") end,
+    function (s) K.nl(s,"Oh hey, it works!" ) end,
+    function (s) K.nl(s,"Hey there, it's very nice to meet you!" ) end,
+    function (s) K.nl(s,"I'm super glad I finally got this working!" ) end,
+    function (s) K.nl(s,"Although before we get started, let's fix this awful text box!" ) end,
+    function (s) K.pTB(s, 40, 450, 0) K.sTB(s, 1200, 200, 0) K.n(s) end,
+    function (s) K.cs(s,"System", "Clackety Clack", "Action") end,
+    function (s) K.cs(s,"Kiinyo", "There we go!") end,
+    function (s) K.nl(s, "And the lights, I can't see a thing!") end,
+    function (s) K.sBG(s, "Simple") K.n(s) end,
+    function (s) K.cs(s,"System", "Click", "Action") end,
+    function (s) K.gt(s,"Debug", 1) end
   }
 }
 
