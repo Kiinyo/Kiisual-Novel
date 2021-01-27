@@ -13,7 +13,14 @@ Kii.Math = {
       y >= tY and y <= tY + tH
     )
   end,
-  lerp = function (origin, target, time)
+  lerp = function (origin, target, time, float)
+    if time == 0 then
+      print("You tried to divide by zero!")
+      return target
+    end
+    if float then
+      return origin + ((target - origin) / time)
+    end
     return math.floor(origin + ((target - origin) / time))
   end,
   ease = function (origin, target, time)
@@ -536,6 +543,7 @@ Kii.Elements = {
       _name = "Simple History Box",
       _type = "Body",
       Dimensions = {
+        _padding = 20,
         _shape = "Rounded Box",
         _alpha = 0.75,
         _color = "Primary"
@@ -562,6 +570,7 @@ Kii.Container = {
       _name = template._name or "Default Container",
       _type = template._type or "Default Container",
       _text = template._text or "Default container text",
+      _elementIDs = template._elementIDs or 1,
       _id = template._id or nil,
       Dimensions = {
         _height = template.Dimensions._height or 100,
@@ -596,15 +605,22 @@ Kii.Container = {
     local element = nil
     while index <= #template.Elements do
       element = Kii.Element.create(template.Elements[index])
-      Kii.Container.formatElement(element, container)
-      table.insert(container.Elements, element)
+      Kii.Container.addElement(container, element)
       index = index + 1
     end
     return container
   end,
-  addElement = function (container, element)
+  removeElement = function (container, element)
+
   end,
-  formatElement = function (element, container)
+  addElement = function (container, element)
+    container._elementIDs = container._elementIDs + 1
+    element._id = container._elementIDs
+    Kii.Container.formatElement(container, element)
+    table.insert(container.Elements, element)
+    return container._elementIDs
+  end,
+  formatElement = function (container, element)
     local xOffset = element.Position._xOffset or math.floor(container.Dimensions._width * element.Position._x)
     local yOffset = element.Position._yOffset or math.floor(container.Dimensions._height * element.Position._y)
     element._relativeX = element.Position._x
@@ -698,6 +714,41 @@ Kii.Container = {
     end
   end,
 
+  -- Flags container for deletion after time
+  selfDestruct = function (container, time, type)
+    container._countdown = time or 0
+    if type == "Fade Out" then
+      container._fadeout = true
+    end
+  end,
+
+  update = function (container)
+    Kii.Container.resize(container)
+    Kii.Container.reposition(container)
+    Kii.Container.updateElements(container)
+
+    if container._countdown ~= nil then
+      if container._countdown <= 0 then
+        container._deleteMe = true
+      else
+        if container._fadeout then
+          local index = 1
+          while index <= #container.Elements do
+            container.Elements[index].Dimensions._alpha = Kii.Math.lerp(
+              container.Elements[index].Dimensions._alpha,
+              0,
+              container._countdown,
+              true
+            )
+            index = index + 1
+          end
+        end
+        container._countdown = container._countdown - 1
+      end
+    end
+    
+  end,
+
   -- Place the container at x, y
   setPosition = function (container, x, y)
     local xDis = container.Position._x - x
@@ -769,13 +820,14 @@ Kii.Container = {
   
     local index = 1
     while index <= #container.Elements do
+      -- To Do: There's a bug here if the x, y, width, and height aren't relative i think?
       container.Elements[index].Position._x = container.Elements[index]._relativeX
       container.Elements[index].Position._y = container.Elements[index]._relativeY
       container.Elements[index].Dimensions._width = container.Elements[index]._relativeWidth
       container.Elements[index].Dimensions._height = container.Elements[index]._relativeHeight
   
   
-      Kii.Container.formatElement(container.Elements[index], container)
+      Kii.Container.formatElement(container, container.Elements[index])
       index = index + 1
     end
   end,
@@ -826,30 +878,6 @@ Kii.Container = {
     container.Resize._targetWidth = width or 100
     container.Resize._targetHeight = height or 100
     container.Resize._frame = time or 10
-  end,
-
-  recolor = function (container, color)
-    local index = 1
-    while index <= #container.Elements do
-      container.Elements[index].Dimensions._color = color
-      index = index + 1
-    end
-  end,
-  applyAnimation = function (container, animation, frame)
-    local index = 1
-    while index <= #container.Elements do
-      container.Elements[index].Animation._type = animation
-      container.Elements[index].Animation._frame = 0 or frame
-      index = index + 1
-    end
-  end,
-  applyShader = function (container, Shader, frame)
-    local index = 1
-    while index <= #container.Elements do
-      container.Elements[index].Shader._type = Shader
-      container.Elements[index].Shader._frame = 0 or frame
-      index = index + 1
-    end
   end
 }
 
@@ -880,10 +908,10 @@ Kii.Containers = {
       _type = "Body",
       Dimensions = {
         _height = 640,
-        _width = 500
+        _width = 640
       },
       Position = {
-        _x = 640 - 250,
+        _x = 320,
         _y = 40
       },
       Colors = {
@@ -896,7 +924,25 @@ Kii.Containers = {
     }
   },
   Backgrounds = {
-    Simple = {
+    SimpleRed = {
+      _name = "Simple Background",
+      _type = "Background",
+      Position = {
+        _x = 0,
+        _y = 0
+      },
+      Dimensions = {
+        _height = 720,
+        _width = 1280
+      },
+      Colors = {
+        _primary = "Red"
+      },
+      Elements = {
+        Kii.Elements.Simple.Box
+      }
+    },
+    SimpleYellow = {
       _name = "Simple Background",
       _type = "Background",
       Position = {
@@ -986,15 +1032,17 @@ Kii.Scene = {
           Kii.Scene.playVoice(scene)
           scene.Text._frame = scene.Text._frame + 1
           scene.Containers[index]._text = string.sub(scene.Text._text, 0, scene.Text._frame)
-          Kii.Container.updateElements(scene.Containers[index])
         end
       end
       -- Container Animations
       local index = 1
       while index <= #scene.Containers do
 
-        Kii.Container.resize(scene.Containers[index])
-        Kii.Container.reposition(scene.Containers[index])
+        Kii.Container.update(scene.Containers[index])
+
+        if scene.Containers[index]._deleteMe then
+            Kii.Scene.removeContainer(scene, scene.Containers[index]._id)
+        end
 
         index = index + 1
       end
@@ -1108,14 +1156,8 @@ Kii.Scene = {
 
           Kii.Container.updateElements(hisCon)
 
-          Kii.Scene.addFlag(scene, "History", Kii.Scene.addContainer(scene, hisCon, "Front"))
+          Kii.Scene.addFlag(scene, "History", Kii.Scene.addContainer(scene, hisCon, #scene.Containers + 1))
 
-          local index = 1
-          print("Printing history!")
-          while index <= #scene.History.Log do
-            print(scene.History.Log[index])
-            index = index + 1
-          end
         elseif scene._pause == "History" then
           scene._pause = nil
           Kii.Scene.removeContainer(scene, Kii.Scene.removeFlag(scene, "History"))
@@ -1272,12 +1314,19 @@ K = {
     Kii.Scene.goTo(s, script, line)
   end,
   -- Shorthand to (s)et (B)ack(G)round
-  sBG = function (s, BG, animation)
+  sBG = function (s, BG, animation, time)
     BG = Kii.Container.create(Kii.Containers.Backgrounds[BG])
 
     if s.Visual._bg then
       if animation then
-        -- Figure this out later
+        if animation == "Fade In" then
+          time = time or 100
+          Kii.Container.selfDestruct(
+            s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)], 
+            time,
+            "Fade Out"
+          )
+        end
       else
         Kii.Scene.removeContainer(s, s.Visual._bg)
         Kii.Scene.addContainer(s, BG)
@@ -1306,12 +1355,16 @@ Kii.Scripts = {
     function (s) K.nl(s,"Hey there, it's very nice to meet you!" ) end,
     function (s) K.nl(s,"I'm super glad I finally got this working!" ) end,
     function (s) K.nl(s,"Although before we get started, let's fix this awful text box!" ) end,
-    function (s) K.pTB(s, 40, 450, 0) K.sTB(s, 1200, 200, 0) K.n(s) end,
+    function (s) K.pTB(s, 40, 450, 20) K.sTB(s, 1200, 200, 20) K.n(s) end,
     function (s) K.cs(s,"System", "Clackety Clack", "Action") end,
     function (s) K.cs(s,"Kiinyo", "There we go!") end,
     function (s) K.nl(s, "And the lights, I can't see a thing!") end,
-    function (s) K.sBG(s, "Simple") K.n(s) end,
+    function (s) K.sBG(s, "SimpleRed") K.n(s) end,
     function (s) K.cs(s,"System", "Click", "Action") end,
+    function (s) K.cs(s,"Kiinyo", "Hmmmm, it's a start but I don't like this color..") end,
+    function (s) K.sBG(s, "SimpleYellow", "Fade In") K.n(s) end,
+    function (s) K.cs(s,"System", "Whooosh", "Action") end,
+    function (s) K.cs(s,"Kiinyo", "Much better!") end,
     function (s) K.gt(s,"Debug", 1) end
   }
 }
