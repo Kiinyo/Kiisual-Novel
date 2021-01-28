@@ -55,8 +55,12 @@ Kii.Render = {
       White  = { 220/255, 214/255, 207/255 },
       Red    = { 155/255, 053/255, 053/255 },
       Blue   = { 059/255, 083/255, 106/255 },
-      Yellow = { 217/255, 189/255, 102/255 }
+      Yellow = { 217/255, 189/255, 102/255 },
+      Clear  = {255,255,255}
     }
+  },
+  Images = {
+    FavoriteAlbum = love.graphics.newImage("kii/media/art/favoriteAlbum")
   },
   -- Takes in a color name and sets the color to be drawn next
   setColor = function (color, alpha, palette)
@@ -266,13 +270,37 @@ Kii.Render = {
     end
     return x, y, width, height
   end,
+  -- Draw an image at x, y, while also maintaining aspect ratio if needed
+  drawImage = function (image, x, y, width, height, aspectRatio)
+    width = width or Kii.Render.Images[image]:getWidth()
+    height = height or Kii.Render.Images[image]:getHeight()
+
+    if aspectRatio then
+      -- Figure out which is the largest
+      sW = math.min(width / Kii.Render.Images[image]:getWidth(), height / Kii.Render.Images[image]:getHeight())
+      sH = sW
+      -- Then alter the x and y to center its location
+      x = math.floor(x + ((width - (Kii.Render.Images[image]:getWidth() * sW)) / 2))
+      y = math.floor(y + ((height - (Kii.Render.Images[image]:getHeight() * sH)) / 2))
+    else
+      sW = width / Kii.Render.Images[image]:getWidth()
+      sH = height / Kii.Render.Images[image]:getHeight()
+    end
+      
+    love.graphics.draw(Kii.Render.Images[image], x, y, 0, sW, sH)
+  end,
   -- Simple enough
   drawElement = function (element)
     -- First thing's first, let's set the colors
     Kii.Render.applyShaders(element)
     -- Now let's figure out where to draw it
     local x, y, width, height = Kii.Render.applyAnimations(element)
-    Kii.Render.polygon(x, y, width, height, element.Dimensions._shape)
+
+    if element._type == "Image" then 
+      Kii.Render.drawImage(element.Dimensions._shape, x, y, width, height, true)
+    else
+      Kii.Render.polygon(x, y, width, height, element.Dimensions._shape)
+    end
     -- Now render any applicable text on top!
     -- The fun part, we need to just get the current alpha
     local r, g, b, a = love.graphics.getColor()
@@ -561,6 +589,20 @@ Kii.Elements = {
       Text = {
         _text = "@None",
         _alignX = "left"
+      }
+    },
+    Image = {
+      _name = "Simple Image",
+      _type = "Image",
+      Dimensions = {
+        _color = "Clear",
+        _shape = "FavoriteAlbum"
+      },
+      Position = {
+        _alignX = "Right"
+      },
+      Text = {
+        _text = "@None"
       }
     }
   }
@@ -1362,6 +1404,22 @@ K = {
   -- Shorthand to (g)o (t)o line
   gt = function (s, script, line)
     Kii.Scene.goTo(s, script, line)
+  end,
+  -- (d)isplay (C)olor (G)raphic
+  dCG = function (s, CG, animation)
+    
+  end,
+  -- (r)emove (C)olor (G)raphic
+  rCG = function (s, CG, animation)
+    
+  end,
+  -- (c)hange (e)motion
+  ce = function(s, character, emotion)
+
+  end,
+  -- (i)ntroduce (c)haracter
+  ic = function (s, character, emotion, animation)
+
   end,
   -- Shorthand to (s)et (B)ack(G)round
   sBG = function (s, BG, animation, time)
