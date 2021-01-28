@@ -23,7 +23,7 @@ Kii.Math = {
     end
     return math.floor(origin + ((target - origin) / time))
   end,
-  ease = function (origin, target, time)
+  ease = function (origin, target, time, float)
     return math.floor(origin + ((target - origin) / 2))
   end
 }
@@ -58,6 +58,7 @@ Kii.Render = {
       Yellow = { 217/255, 189/255, 102/255 }
     }
   },
+  -- Takes in a color name and sets the color to be drawn next
   setColor = function (color, alpha, palette)
     color = color or "Black"
     alpha = alpha or 1
@@ -68,6 +69,7 @@ Kii.Render = {
                            Kii.Render.Palette[palette][color][3],
                            alpha)
   end,
+  -- Returns, R, G, B of color given
   colorFind = function (color, palette)
     color = color or "Black"
     palette = palette or "Tauriel"
@@ -76,9 +78,11 @@ Kii.Render = {
            Kii.Render.Palette[palette][color][2],
            Kii.Render.Palette[palette][color][3]
   end,
+  -- Sets the font
   setFont = function (font)
     love.graphics.setFont(Kii.Render.Fonts[font])
   end,
+  -- Draws text on screen and returns any leftover text
   printText = function (text, x, y, width, height, alignx, aligny)
 
     local font = love.graphics.getFont()
@@ -107,6 +111,7 @@ Kii.Render = {
   
     return wrappedText
   end,
+  -- Renders a polygon
   polygon = function (x, y, width, height, shape)
     local vertices = {}
     if shape == "Right Iso Tri" then -- looks like ▶
@@ -198,6 +203,7 @@ Kii.Render = {
     end
     if shape ~= "None" then love.graphics.polygon('fill', vertices) end
   end,
+  -- Preps the draw function's colors
   applyShaders = function (element)
     -- A bit of shenaniganery
     local r, g, b = Kii.Render.colorFind(element.Dimensions._color)
@@ -246,6 +252,7 @@ Kii.Render = {
   
     love.graphics.setColor(r, g, b, a)
   end,
+  -- Preps the draw functions coords
   applyAnimations = function (element)
     local x = element.Position._x
     local y = element.Position._y
@@ -259,6 +266,7 @@ Kii.Render = {
     end
     return x, y, width, height
   end,
+  -- Simple enough
   drawElement = function (element)
     -- First thing's first, let's set the colors
     Kii.Render.applyShaders(element)
@@ -281,6 +289,7 @@ Kii.Render = {
     end
   
   end,
+  -- Simple enough
   drawContainer = function (container)
     local index = 1
     while index <= #container.Elements do
@@ -288,6 +297,7 @@ Kii.Render = {
       index = index + 1
     end
   end,
+  -- Simple enough
   drawScene = function (scene)
     local index = 1
     while index <= #scene.Containers do
@@ -610,9 +620,28 @@ Kii.Container = {
     end
     return container
   end,
-  removeElement = function (container, element)
+  -- Removes the element associated with the current id
+  removeElement = function (container, id)
+    table.remove(container.Elements, Kii.Container.findIndex(container, id))
+  end,
+  findIndex = function (container, id)
+    local indexA = 1
+
+    while true do
+      if indexA > #container.Elements then
+        indexA = nil
+        break
+      end      
+      if container.Elements[indexA]._id == id then
+        break
+      end
+      indexA = indexA + 1
+    end
+
+    return indexA
 
   end,
+  -- Adds an element and returns its id
   addElement = function (container, element)
     container._elementIDs = container._elementIDs + 1
     element._id = container._elementIDs
@@ -620,6 +649,7 @@ Kii.Container = {
     table.insert(container.Elements, element)
     return container._elementIDs
   end,
+  -- Scale and position all the elements
   formatElement = function (container, element)
     local xOffset = element.Position._xOffset or math.floor(container.Dimensions._width * element.Position._x)
     local yOffset = element.Position._yOffset or math.floor(container.Dimensions._height * element.Position._y)
@@ -701,6 +731,7 @@ Kii.Container = {
       element.Text._text = container._text
     end
   end,
+  -- Cycles through the elements and updates headers and bodies
   updateElements = function (container)
     local index = 1
     while index <= #container.Elements do
@@ -722,6 +753,7 @@ Kii.Container = {
     end
   end,
 
+  -- General update function, also processes self destruct
   update = function (container)
     Kii.Container.resize(container)
     Kii.Container.reposition(container)
@@ -964,6 +996,7 @@ Kii.Containers = {
 }
 
 Kii.Scene = {
+  -- Creates a new scene and sets a bunch of defaults, returns a Scene
   create = function (template)
     template = template or {}
     template.Containers = template.Containers or {Kii.Containers.Debug}
@@ -1020,9 +1053,7 @@ Kii.Scene = {
     return scene
   
   end,
-  displayHistory = function (scene)
-
-  end,
+  -- Updates everything in a scene
   update = function (scene)
     if scene._pause == nil then
       -- Text handling
@@ -1049,18 +1080,22 @@ Kii.Scene = {
 
     end
   end,
+  -- Advances to the next line in the current Script
   advance = function (scene)
     scene.Script._index = scene.Script._index + 1
     Kii.Script.lookUp(scene.Script._current, scene.Script._index, scene)
   end,
+  -- Goes to a designated line in a designated Script
   goTo = function (scene, script, index)
     scene.Script._index = index
     scene.Script._current = script
     Kii.Script.lookUp(script, index, scene)
   end,
+  -- Playes a character's voice
   playVoice = function (scene)
-    if scene.Audio._voice ~= nil then Kii.Audio.playSFX(scene.Audio._voice)end
+    if scene.Audio._voice ~= nil then Kii.Audio.playSFX(scene.Audio._voice) end
   end,
+  -- Given an x and y coordinate, returns the element if interactive
   findElement = function (scene, x, y)
     local cIndex = 1
     local eIndex = 1
@@ -1087,6 +1122,7 @@ Kii.Scene = {
   
     return returnValue
   end,
+  -- Adds a container to the scene and returns its _id
   addContainer = function (scene, container, position)
     scene._id = scene._id + 1
     container._id = scene._id + 0
@@ -1107,14 +1143,17 @@ Kii.Scene = {
     table.insert(scene.Containers, position, container)
     return container._id
   end,
+  -- Adds a flag to the scene containing anything
   addFlag = function (scene, flag, contents)
     scene.Flags[flag] = contents
   end,
+  -- Removes a flag from the scene and returns its contents
   removeFlag = function (scene, flag)
     local contents = scene.Flags[flag]
     scene.Flags[flag] = nil
     return contents
   end,
+  -- Gets the current position of a container with a given ID in scene.Containers
   findIndex = function (scene, ID)
     local indexA = 1
 
@@ -1132,12 +1171,30 @@ Kii.Scene = {
     return indexA
 
   end,
+  -- Removes a container based on its _id
   removeContainer = function (scene, ID)
     if ID == scene.Text._textBox then
       scene.Text._textBox = nil
     end
     table.remove(scene.Containers, Kii.Scene.findIndex(scene, ID))
   end,
+  -- Toggles whether or not the history is displayed
+  toggleHistory = function (scene)
+    if scene._pause == nil then
+      local hisCon = Kii.Container.create(Kii.Containers.Simple.History)
+      scene._pause = "History"
+      hisCon._text = Kii.Util.parseText(scene.History.Log)
+
+      Kii.Container.updateElements(hisCon)
+
+      Kii.Scene.addFlag(scene, "History", Kii.Scene.addContainer(scene, hisCon, #scene.Containers + 1))
+
+    elseif scene._pause == "History" then
+      scene._pause = nil
+      Kii.Scene.removeContainer(scene, Kii.Scene.removeFlag(scene, "History"))
+    end
+  end,
+  -- Handles user input,
   handleEvent = function (scene, event) -- down(), up(), click(), over(), leave(), abandon()
     if event[1] == "Mouse Down" then -- Calls down() on an element at x, y
       if event[2] == 1 then
@@ -1149,19 +1206,7 @@ Kii.Scene = {
             scene)
         end
       elseif event[2] == 2 then
-        if scene._pause == nil then
-          local hisCon = Kii.Container.create(Kii.Containers.Simple.History)
-          scene._pause = "History"
-          hisCon._text = Kii.Util.parseText(scene.History.Log)
-
-          Kii.Container.updateElements(hisCon)
-
-          Kii.Scene.addFlag(scene, "History", Kii.Scene.addContainer(scene, hisCon, #scene.Containers + 1))
-
-        elseif scene._pause == "History" then
-          scene._pause = nil
-          Kii.Scene.removeContainer(scene, Kii.Scene.removeFlag(scene, "History"))
-        end
+        Kii.Scene.toggleHistory(scene)
       end
     elseif event[1] == "Mouse Up" then -- Calls click() if down = up, else down.abandon(), up.up()
       if event[2] == 1 then
@@ -1230,12 +1275,14 @@ Kii.Scene = {
       scene._mouseOver = placeholder
     end
   end,
+  -- Used for logging text currently displayed to the player
   addToHistory = function (scene, text)
     table.insert(scene.History.Log, text)
     if #scene.History.Log > scene.History._length then
       table.remove(scene.History.Log, 1)
     end
   end,
+  -- Changes the text to be displayed by the textBox
   changeText = function (scene, text, style)
     style = style or "Spoken"
     if style == "Spoken" then
@@ -1249,6 +1296,7 @@ Kii.Scene = {
     scene.Text._text = text
     scene.Text._frame = 0
   end,
+  -- Changes the current speaker of the text (changes textBox header)
   changeSpeaker = function (scene, text, voice, color)
     voice = voice or nil
     color = color or "Blue"
@@ -1281,12 +1329,14 @@ Kii.Script = {
       _voice = "Generic"
     }
   },
+  -- Runs the indicated line
   lookUp = function (script, index, scene)
     Kii.Scripts[script][index](scene)
     Kii.Scene.update(scene)
   end
 }
 
+-- Shortcuts to make script writing less painful!
 K = {
   -- (n)ext frame
   n = function (s)
@@ -1336,6 +1386,10 @@ K = {
     Kii.Scene.addContainer(s, BG)
 
   end,
+  -- play SFX
+  pSFX = function (SFX)
+    Kii.Audio.playSFX(SFX)
+  end,
   -- (p)osition (T)ext(B)ox
   pTB = function (s, x, y, time, type)
     Kii.Container.move(s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)], x, y, time, type)
@@ -1351,7 +1405,7 @@ Kii.Scripts = {
   Debug = {
     function (s) K.cs(s,"System", "NOW ENTERING KIINYO'S VN TECH DEMO", "None") end,
     function (s) K.cs(s,"Kiinyo", "Hello, is this thing on?") end,
-    function (s) K.nl(s,"Oh hey, it works!" ) end,
+    function (s) K.nl(s,"Oh hey, it works!") end,
     function (s) K.nl(s,"Hey there, it's very nice to meet you!" ) end,
     function (s) K.nl(s,"I'm super glad I finally got this working!" ) end,
     function (s) K.nl(s,"Although before we get started, let's fix this awful text box!" ) end,
