@@ -1583,6 +1583,22 @@ K = {
     style = style or nil
     Kii.Scene.changeText(s, text, style)
   end,
+  sF = function (s, flag, contents)
+    contents = contents or true
+    s.Flags[flag] = contents
+    return contents
+  end,
+  cF = function (s, flag)
+    return s.Flags[flag]
+  end,
+  -- conditional dialogue
+  cD = function (s, flag, text1, text2)
+    if s.Flags[flag] then
+      K.nl(s, text1)
+    else
+      K.nl(s, text2)
+    end
+  end,
   -- Shorthand to (g)o (t)o line
   gt = function (s, script, line)
     Kii.Scene.goTo(s, script, line)
@@ -1652,6 +1668,7 @@ K = {
       animation
     )
   end,
+  --get Back Ground
   gBG = function (s)
     return s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)]
   end,
@@ -1688,6 +1705,7 @@ K = {
   pSFX = function (SFX)
     Kii.Audio.playSFX(SFX)
   end,
+  -- get Text Box
   gTB = function (s)
     return s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)]
   end,
@@ -1745,13 +1763,7 @@ Kii.Scripts = {
     function (s) K.mc(s, "Default",1450, 5) K.n(s) end,
     function (s) K.nl(s, "Click", "Action") end,
     function (s) K.nl(s, "No...", "Spoken") end,
-    function (s)
-      if s.Flags["SD"] then
-        -- Nothing!
-      else
-        Kii.Container.addElement(s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)], Kii.Element.create(Kii.Elements.Debug.ExitButton)) 
-      end
-      K.n(s) end,
+    function (s) if K.cF(s, "SD") then  else Kii.Container.addElement(s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)], Kii.Element.create(Kii.Elements.Debug.ExitButton)) end K.n(s) end,
     function (s) K.nl(s, "Click", "Action") end,
     function (s) 
       if s.Flags["SD"] then
@@ -1798,7 +1810,6 @@ Kii.Scripts = {
       local s2 = s._savedPosition[2]
       local s3 = s._savedPosition[3]
       s._savedPosition = nil
-      print(s._savedPosition)
       s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)]._name = s3
       K.gt(s, s1, s2)
     end
