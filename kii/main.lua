@@ -13,6 +13,9 @@ Kii.Math = {
       y >= tY and y <= tY + tH
     )
   end,
+  sign = function (value)
+    return (value / math.abs(value))
+  end,
   lerp = function (origin, target, time, float)
     if time == 0 then
       print("You tried to divide by zero!")
@@ -58,9 +61,6 @@ Kii.Render = {
       Yellow = { 217/255, 189/255, 102/255 },
       Clear  = {255,255,255}
     }
-  },
-  Images = {
-    FavoriteAlbum = love.graphics.newImage("kii/media/art/favoriteAlbum")
   },
   -- Takes in a color name and sets the color to be drawn next
   setColor = function (color, alpha, palette)
@@ -240,18 +240,24 @@ Kii.Render = {
       end
     elseif element.Shader._type == "Fade In" then
       -- Fading in animation!
-      -- Duration: 10 frames for full effect!
+      -- Duration: _modifier frames for full effect!
       -- Effect increases the alpha from 0% to 100%
-      a = a * Kii.Math.clamp(0 + (1 * (element.Shader._frame / 100)), 0, 1) -- Alpha calculation
+      a = a * Kii.Math.clamp(0 + (1 * (element.Shader._frame / element.Shader._modifier )), 0, 1) -- Alpha calculation
       -- Increment frame if it's less than 10!
-      if element.Shader._frame < 100 then element.Shader._frame = element.Shader._frame + 1 end
+      if element.Shader._frame < element.Shader._modifier then element.Shader._frame = element.Shader._frame + 1
+      else
+        element.Shader._type = "None"
+      end
     elseif element.Shader._type == "Fade Out" then
       -- Fading out animation!
       -- Duration: 10 frames for full effect!
       -- Effect decreases the Alpha from 100% to 0%
       a = a * Kii.Math.clamp(1 - (1 * (element.Shader._frame / 10)), 0, 1) -- Alpha calculation
       -- Increment frame if it's less than 10!
-      if element.Shader._frame < 10 then element.Shader._frame = element.Shader._frame + 1 end
+      if element.Shader._frame < 10 then element.Shader._frame = element.Shader._frame + 1
+      else
+        element._deleteMe = true
+      end
     end
   
     love.graphics.setColor(r, g, b, a)
@@ -272,22 +278,23 @@ Kii.Render = {
   end,
   -- Draw an image at x, y, while also maintaining aspect ratio if needed
   drawImage = function (image, x, y, width, height, aspectRatio)
-    width = width or Kii.Render.Images[image]:getWidth()
-    height = height or Kii.Render.Images[image]:getHeight()
+    width = width or image:getWidth()
+    height = height or image:getHeight()
 
     if aspectRatio then
       -- Figure out which is the largest
-      sW = math.min(width / Kii.Render.Images[image]:getWidth(), height / Kii.Render.Images[image]:getHeight())
-      sH = sW
+      sW = math.min(math.abs(width / image:getWidth()), math.abs(height / image:getHeight()))
+      sH = sW * Kii.Math.sign(height)
+      sW = sW * Kii.Math.sign(width)
       -- Then alter the x and y to center its location
-      x = math.floor(x + ((width - (Kii.Render.Images[image]:getWidth() * sW)) / 2))
-      y = math.floor(y + ((height - (Kii.Render.Images[image]:getHeight() * sH)) / 2))
+      x = math.floor(x + ((width - (image:getWidth() * sW)) / 2))
+      y = math.floor(y + ((height - (image:getHeight() * sH)) / 2))
     else
-      sW = width / Kii.Render.Images[image]:getWidth()
-      sH = height / Kii.Render.Images[image]:getHeight()
+      sW = width / image:getWidth()
+      sH = height / image:getHeight()
     end
       
-    love.graphics.draw(Kii.Render.Images[image], x, y, 0, sW, sH)
+    love.graphics.draw(image, x, y, 0, sW, sH)
   end,
   -- Simple enough
   drawElement = function (element)
@@ -297,7 +304,11 @@ Kii.Render = {
     local x, y, width, height = Kii.Render.applyAnimations(element)
 
     if element._type == "Image" then 
-      Kii.Render.drawImage(element.Dimensions._shape, x, y, width, height, true)
+      Kii.Render.drawImage(Kii.Render.Images[element.Dimensions._shape], x, y, width, height, true)
+    elseif element._type == "SpriteBase" then
+      Kii.Render.drawImage(Kii.Sprites[element._name].Bases[element.Dimensions._shape], x, y, width, height, true)
+    elseif element._type == "SpriteExpression" then
+      Kii.Render.drawImage(Kii.Sprites[element._name].Expressions[element.Dimensions._shape], x, y, width, height, true)
     else
       Kii.Render.polygon(x, y, width, height, element.Dimensions._shape)
     end
@@ -391,7 +402,7 @@ Kii.Element = {
       },
       Shader = {
         _type = template.Shader._type or "None",
-        _frame = template.Shader._frame or 0, 
+        _frame = template.Shader._frame or 0,
         _modifier = template.Shader._modifier or 1
       },
       Actions = {
@@ -422,6 +433,18 @@ Kii.Element = {
 }
 
 Kii.Element.Actions = {
+  WarnPlayer = function (self, container, scene)
+    Kii.Element.Actions["Excite"](self, container, scene)
+
+    if scene._savedPosition == nil then
+      scene._savedPosition = {
+        scene.Script._current,
+        scene.Script._index,
+        scene.Containers[Kii.Scene.findIndex(scene, scene.Text._textBox)]._name
+      }
+      Kii.Scene.goTo(scene, "Panic", 1)
+    end
+  end,
   QuitGame = function (self, container, scene)
     love.event.quit()
   end,
@@ -492,7 +515,8 @@ Kii.Elements = {
       _name = "Debug Header",
       _type = "Header",
       Dimensions = {
-        _height = 0.25,
+        _relative = "Width",
+        _height = 50,
         _width = 0.25,
         _shape = "Text Box Header",
         _color = "Accent",
@@ -514,7 +538,8 @@ Kii.Elements = {
       _interactive = true,
       Dimensions = {
         _color = "Red",
-        _height = 0.25,
+        _relative = "Width",
+        _height = 50,
         _width = 0.25
       },
       Position = {
@@ -523,7 +548,7 @@ Kii.Elements = {
         _alignY = "Below"
       },
       Text = {
-        _text = "Quit Game?",
+        _text = "Quit Demo?",
         _color = "Black"
       },
       Actions = {
@@ -531,7 +556,7 @@ Kii.Elements = {
         up = "Reset",
         click = "QuitGame",
         abandon = "Reset",
-        over = "Excite",
+        over = "WarnPlayer",
         leave = "Reset",
       }
     },
@@ -770,7 +795,7 @@ Kii.Container = {
     if element._type == "Header" then
       element.Text._text = container._name
     elseif element._type == "Body" then
-      element.Text._text = container._text
+      element.Text._text = container._textupdate
     end
   end,
   -- Cycles through the elements and updates headers and bodies
@@ -783,6 +808,20 @@ Kii.Container = {
       elseif container.Elements[index]._type == "Body" then
         container.Elements[index].Text._text = container._text
       end
+      if container.Elements[index]._deleteMe then
+        Kii.Container.removeElement(container, container.Elements[index]._id)
+      end
+      index = index + 1
+    end
+  end,
+
+  animate = function (container, animation, scale)
+    scale = scale or 1
+    local index = 1
+    while index <= #container.Elements do
+      container.Elements[index].Animation._type = animation
+      container.Elements[index].Animation._frame = 0
+      container.Elements[index].Animation._modifier = scale
       index = index + 1
     end
   end,
@@ -792,6 +831,20 @@ Kii.Container = {
     container._countdown = time or 0
     if type == "Fade Out" then
       container._fadeout = true
+    elseif type == "Stage Left" then
+      Kii.Container.move(
+        container,
+        love.graphics.getWidth(),
+        container.Position._y,
+        time
+      )
+    elseif type == "Stage Right" then
+      Kii.Container.move(
+        container,
+        0 - container.Dimensions._width,
+        container.Position._y,
+        time
+      )
     end
   end,
 
@@ -952,6 +1005,21 @@ Kii.Container = {
     container.Resize._targetWidth = width or 100
     container.Resize._targetHeight = height or 100
     container.Resize._frame = time or 10
+  end,
+  flip = function (container, length)
+    length = length or 0
+    Kii.Container.scale(
+      container,
+      container.Dimensions._width * -1,
+      container.Dimensions._height,
+      length
+    )
+    Kii.Container.move(
+      container,
+      container.Position._x + container.Dimensions._width,
+      container.Position._y,
+      length
+    )
   end
 }
 
@@ -1074,14 +1142,13 @@ Kii.Scene = {
       },
       Visual = {
         _bg = template.Visual._bg or nil,
-        Sprites = template.Visual.Sprites or {}
+        Sprites = template.Visual.Sprites or {},
       },
       Containers = {},
       Flags = {},
 
     }
-  
-    local index = 1
+      local index = 1
     local container = nil
   
     while index <= #template.Containers do
@@ -1094,6 +1161,44 @@ Kii.Scene = {
   
     return scene
   
+  end,
+  getSprite = function (s, spriteName)
+    return s.Containers[Kii.Scene.findIndex(s, s.Visual.Sprites[spriteName])]
+  end,
+  addSprite = function (scene, sprite, position, animation, length)
+    length = length or 25
+    local y = love.graphics.getHeight() - sprite.Dimensions._height
+    local x = position
+
+    if animation == "Fade In" then
+      local index = 1
+      while index <= #sprite.Elements do
+        sprite.Elements[index].Shader._type = "Fade In"
+        sprite.Elements[index].Shader._frame = 0
+        sprite.Elements[index].Shader._modifier = length
+        index = index + 1
+      end
+      Kii.Container.setPosition(sprite, x, y)
+    elseif animation == "Stage Right" then
+      Kii.Container.setPosition(
+        sprite,
+        0 - sprite.Dimensions._width,
+        y
+      )
+      Kii.Container.move(sprite, x, y, length)
+    elseif animation == "Stage Left" then
+      Kii.Container.setPosition(
+        sprite,
+        love.graphics.getWidth(),
+        y
+      )
+      Kii.Container.move(sprite, x, y, length)
+    end
+
+    scene.Visual.Sprites[sprite._name] = Kii.Scene.addContainer(scene, sprite)
+  end,
+  removeSprite = function (scene, spriteName)
+    Kii.Scene.removeContainer(scene, scene.Visual.Sprites[spriteName])
   end,
   -- Updates everything in a scene
   update = function (scene)
@@ -1215,10 +1320,13 @@ Kii.Scene = {
   end,
   -- Removes a container based on its _id
   removeContainer = function (scene, ID)
+    local index = Kii.Scene.findIndex(scene, ID)
     if ID == scene.Text._textBox then
       scene.Text._textBox = nil
+    elseif scene.Containers[index]._type == "Sprite" then
+      scene.Visual.Sprites[scene.Containers[index]._name] = nil
     end
-    table.remove(scene.Containers, Kii.Scene.findIndex(scene, ID))
+    table.remove(scene.Containers, index)
   end,
   -- Toggles whether or not the history is displayed
   toggleHistory = function (scene)
@@ -1352,11 +1460,80 @@ Kii.Scene = {
   end
 }
 
+Kii.Sprite = {
+  create = function (name, base, expression)
+    local sprite = Kii.Container.create({
+      _name = name,
+      _type = "Sprite",
+      Dimensions = {
+        _height = 600,
+        _width = 300
+      }
+    })
+    sprite.Sprite = {
+      _base = nil,
+      _expression = nil,
+    }
+    Kii.Sprite.changeBase(sprite, base)
+    Kii.Sprite.changeExpression(sprite, expression)
+
+    return sprite
+  end,
+  changeBase = function(sprite, base)
+    base = Kii.Element.create({
+        _name = sprite._name,
+        _type = "SpriteBase",
+        Dimensions = {
+          _color = "Clear",
+          _shape = base,
+        },
+        Text = {
+          _text = "@None"
+        }
+    })
+    if sprite.Sprite._base then
+      Kii.Container.removeElement(sprite, sprite.Sprite._base)
+    end
+    sprite.Sprite._base = Kii.Container.addElement(sprite, base)
+  end,
+  changeExpression = function (sprite, expression)
+    expression = Kii.Element.create({
+        _name = sprite._name,
+        _type = "SpriteExpression",
+        Dimensions = {
+          _color = "Clear",
+          _shape = expression,
+        },
+        Text = {
+          _text = "@None"
+        }
+    })
+    if sprite.Sprite._expression then
+      Kii.Container.removeElement(sprite, sprite.Sprite._expression)
+    end
+    sprite.Sprite._expression = Kii.Container.addElement(sprite, expression)
+
+  end
+}
+
+Kii.Sprites = {
+  Default = {
+    Bases = {
+      Default = love.graphics.newImage("kii/media/art/sprites/default/bases/default.png")
+    },
+    Expressions = {
+      Default = love.graphics.newImage("kii/media/art/sprites/default/expressions/default.png"),
+      Happy = love.graphics.newImage("kii/media/art/sprites/default/expressions/happy.png"),
+      Sad = love.graphics.newImage("kii/media/art/sprites/default/expressions/sad.png"),
+    }
+  }
+}
+
 Kii.Script = {
   Characters = {
     Kiinyo = {
       _color = "White",
-      _voice = "Generic_Female"
+      _voice = "Generic_Female",
     },
     Alistair = {
       _color = "Red",
@@ -1386,11 +1563,16 @@ K = {
   end,
   -- Shorthand to (c)hange (s)peaker
   cs = function (s, Speaker, text, style)
+    local voice = Kii.Script.Characters[Speaker]._voice
+    local color = Kii.Script.Characters[Speaker]._color
+    if Speaker == "None" then
+      Speaker = ""
+    end
     Kii.Scene.changeSpeaker(
       s,
       Speaker,
-      Kii.Script.Characters[Speaker]._voice,
-      Kii.Script.Characters[Speaker]._color
+      voice,
+      color
     )
     if text then K.nl(s, text, style) else
       Kii.Scene.advance(s)
@@ -1413,13 +1595,65 @@ K = {
   rCG = function (s, CG, animation)
     
   end,
-  -- (c)hange (e)motion
-  ce = function(s, character, emotion)
+  -- (m)ove (character)
+  mc = function (s, character, x, speed, y)
+    y = y or Kii.Scene.getSprite(s, character).Position._y
+    speed = speed or 25
+    Kii.Container.move(
+      Kii.Scene.getSprite(s, character),
+      x,
+      y,
+      speed
+    )
+  end,
+  -- (a)nimate character
+  a = function (s, character, animation, scale)
+    Kii.Container.animate(
+      s.Containers[Kii.Scene.findIndex(s, s.Visual.Sprites[character])], 
+      animation,
+      scale)
+  end,
+  -- (z)oom (c)haracter
+  zc = function (s, character, zoom, speed)
+    Kii.Container.scale(
+      Kii.Scene.getSprite(s, character),
+      Kii.Scene.getSprite(s, character).Dimensions._width * zoom,
+      Kii.Scene.getSprite(s, character).Dimensions._height * zoom,
+      speed
+    )
+    Kii.Container.move(
+      Kii.Scene.getSprite(s, character),
+      math.floor(Kii.Scene.getSprite(s, character).Position._x - (Kii.Scene.getSprite(s, character).Dimensions._width * zoom - Kii.Scene.getSprite(s, character).Dimensions._width) / 2),
+      Kii.Scene.getSprite(s, character).Position._y,
+      speed
+    )
 
   end,
+  -- (f)lip (c)haracter
+  fc = function (s, character, time)
+    time = time or 10
+    Kii.Container.flip(s.Containers[Kii.Scene.findIndex(s, s.Visual.Sprites[character])], time)
+  end,
+  -- (c)hange (e)motion
+  ce = function(s, character, emotion)
+    Kii.Sprite.changeExpression(Kii.Scene.getSprite(s, character), emotion)
+  end,
   -- (i)ntroduce (c)haracter
-  ic = function (s, character, emotion, animation)
-
+  ic = function (s, character, emotion, position, animation, variant)
+    variant = variant or "Default"
+    local sprite = Kii.Sprite.create(character, variant, emotion)
+    Kii.Scene.addSprite(s, sprite, position, animation)
+  end,
+  -- (r)emove (c)haracter
+  rc = function (s, character, animation, length)
+    Kii.Container.selfDestruct(
+      s.Containers[Kii.Scene.findIndex(s, s.Visual.Sprites[character])],
+      length,
+      animation
+    )
+  end,
+  gBG = function (s)
+    return s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)]
   end,
   -- Shorthand to (s)et (B)ack(G)round
   sBG = function (s, BG, animation, time)
@@ -1437,16 +1671,25 @@ K = {
         end
       else
         Kii.Scene.removeContainer(s, s.Visual._bg)
-        Kii.Scene.addContainer(s, BG)
       end
     end
 
     Kii.Scene.addContainer(s, BG)
 
   end,
+  -- remove Background
+  rBG = function (s, animation, time)
+
+    Kii.Scene.removeContainer(s, s.Visual._bg)
+    s.Visual._bg = nil
+
+  end,
   -- play SFX
   pSFX = function (SFX)
     Kii.Audio.playSFX(SFX)
+  end,
+  gTB = function (s)
+    return s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)]
   end,
   -- (p)osition (T)ext(B)ox
   pTB = function (s, x, y, time, type)
@@ -1462,22 +1705,103 @@ K = {
 Kii.Scripts = {
   Debug = {
     function (s) K.cs(s,"System", "NOW ENTERING KIINYO'S VN TECH DEMO", "None") end,
-    function (s) K.cs(s,"Kiinyo", "Hello, is this thing on?") end,
-    function (s) K.nl(s,"Oh hey, it works!") end,
-    function (s) K.nl(s,"Hey there, it's very nice to meet you!" ) end,
-    function (s) K.nl(s,"I'm super glad I finally got this working!" ) end,
-    function (s) K.nl(s,"Although before we get started, let's fix this awful text box!" ) end,
-    function (s) K.pTB(s, 40, 450, 20) K.sTB(s, 1200, 200, 20) K.n(s) end,
-    function (s) K.cs(s,"System", "Clackety Clack", "Action") end,
-    function (s) K.cs(s,"Kiinyo", "There we go!") end,
-    function (s) K.nl(s, "And the lights, I can't see a thing!") end,
+    function (s) K.cs(s, "Kiinyo", "Hello, is this thing on?", "Spoken") end,
+    function (s) K.nl(s, "Awesome, looks like I finally got it working!!", "Spoken") end,
+    function (s) K.nl(s, "Before anything else, let's see about fixing this text box...", "Spoken") end,
+    function (s) K.pTB(s, 40, 520, 25) K.sTB(s, 1200, 150, 25) K.n(s) end,
+    function (s) K.cs(s, "Kiinyo", "Clackety Clack", "Action") end,
+    function (s) K.cs(s, "Kiinyo", "Much better! ", "Spoken") end,
+    function (s) K.nl(s, "I have no idea who set it up like that.", "Spoken") end,    
+    function (s) K.cs(s, "System", "(She did...)", "None") end,
+    function (s) K.cs(s, "Kiinyo", "Now that that's out of the way, let's see about turning on some lights in here!", "Spoken") end,
     function (s) K.sBG(s, "SimpleRed") K.n(s) end,
-    function (s) K.cs(s,"System", "Click", "Action") end,
-    function (s) K.cs(s,"Kiinyo", "Hmmmm, it's a start but I don't like this color..") end,
-    function (s) K.sBG(s, "SimpleYellow", "Fade In") K.n(s) end,
-    function (s) K.cs(s,"System", "Whooosh", "Action") end,
-    function (s) K.cs(s,"Kiinyo", "Much better!") end,
+    function (s) K.cs(s, "Kiinyo", "Click", "Action") end,
+    function (s) K.cs(s, "Kiinyo", "Oof!", "Spoken") end,
+    function (s) K.nl(s, "I can see, but I don't like this color!", "Spoken") end,    
+    function (s) K.nl(s, "Let's see if I can't do something about that too...", "Spoken") end,
+    function (s) K.sBG(s, "SimpleYellow", "Fade In", 25) K.n(s) end,
+    function (s) K.cs(s, "System", "Woosh", "Action") end,
+    function (s) K.cs(s, "Kiinyo", "Ah, that's more like it!", "Spoken") end,
+    function (s) K.nl(s, "Now this wouldn't be a Visual Novel without some characters!", "Spoken") end,
+    function (s) K.nl(s, "Let's see about drawing one up really fast...", "Spoken") end,
+    function (s) K.ic(s, "Default", "Sad", 500, "Fade In") end,
+    function (s) K.nl(s, "There we go!", "Spoken") end,
+    function (s) K.nl(s, "But why are they sad?", "Spoken") end,
+    function (s) K.nl(s, "One second, I can fix this...", "Spoken") end,
+    function (s) K.a(s, "Default", "Jitter", 100) K.n(s) end,
+    function (s) K.nl(s, "Click", "Action") end,
+    function (s) K.nl(s, "...", "Spoken") end,
+    function (s) K.nl(s, ".......", "Spoken") end,
+    function (s) K.a(s, "Default", "None") K.n(s) end,
+    function (s) K.nl(s, "Click", "Action") end,
+    function (s) K.nl(s, "Wrong switch.", "Spoken") end,
+    function (s) K.nl(s, "I know it's one of these...", "Spoken") end,
+    function (s) K.zc(s, "Default", 2, 10) K.n(s) end,
+    function (s) K.nl(s, "Click", "Action") end,
+    function (s) K.nl(s, "No...", "Spoken") end,
+    function (s) K.fc(s, "Default", 1) K.n(s) end,
+    function (s) K.nl(s, "Click", "Action") end,
+    function (s) K.nl(s, "No...", "Spoken") end,
+    function (s) K.mc(s, "Default",1450, 5) K.n(s) end,
+    function (s) K.nl(s, "Click", "Action") end,
+    function (s) K.nl(s, "No...", "Spoken") end,
+    function (s)
+      if s.Flags["SD"] then
+        -- Nothing!
+      else
+        Kii.Container.addElement(s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)], Kii.Element.create(Kii.Elements.Debug.ExitButton)) 
+      end
+      K.n(s) end,
+    function (s) K.nl(s, "Click", "Action") end,
+    function (s) 
+      if s.Flags["SD"] then
+        K.nl(s, "...", "Spoken") 
+      else
+        K.nl(s, "Ah!", "Spoken") 
+      end
+    end,
+    function (s) 
+      if s.Flags["SD"] then
+        K.nl(s, "Why didn't that button do anything...?", "Spoken") 
+      else
+        K.nl(s, "Please don't touch that...", "Spoken") 
+        s.Flags["SD"] = true
+      end
+    end,
+    function (s) K.ce(s, "Default", "Happy") K.n(s) end,
+    function (s) K.nl(s, "Click", "Action") end,
+    function (s) K.cs(s, "Kiinyo", "There, that's the one!", "Spoken") end,
+    function (s) K.nl(s, "Now let's slowly fix this mess...", "Spoken") end,
+    function (s) K.zc(s, "Default", 0.5, 10) end,
+    function (s) K.fc(s, "Default", 100) end,
+    function (s) K.cs(s, "Kiinyo", "Phew", "Spoken") end,
+    function (s) K.nl(s, "That's enouch excitement for me.", "Spoken") end,
+    function (s) K.nl(s, "I had a bunch of features to show you but after that performance I think I'd rather not risk it...", "Spoken") end,    
+    function (s) K.nl(s, "Thanks for checking out this demo!", "Spoken") end,
+    function (s) K.nl(s, "...", "Spoken") end,
+    function (s) K.nl(s, "Oh!", "Spoken") end,    
+    function (s) K.nl(s, "It loops though so I'll have to reset everything!", "Spoken") end,
+    function (s) K.nl(s, "One sec-", "Spoken") end,
+    function (s) K.sTB(s, 500,500,100) K.pTB(s, 100, 100, 100) K.rBG(s) K.rc(s, "Default", "Stage Left", 100) K.n(s) end,
+    function (s) K.cs(s, "System", "Beep Boop", "Action") end,
+    function (s) K.cs(s, "Kiinyo", "Much better!", "Spoken") end,
+    function (s) K.nl(s, "See you next time!", "Spoken") end,        
     function (s) K.gt(s,"Debug", 1) end
+  },
+  Panic = {
+    function (s) K.cs(s, "Kiinyo", "!!!", "Spoken") end,
+    function (s) K.nl(s, "Even hovering over it is dangerous, please stay away from it!", "Spoken") end,
+    function (s) K.nl(s, "Mmmm, now what page of the script was I on...", "Spoken") end,
+    function (s) K.nl(s, "Oh that's right!", "Spoken") end,
+    function (s) 
+      local s1 = s._savedPosition[1]
+      local s2 = s._savedPosition[2]
+      local s3 = s._savedPosition[3]
+      s._savedPosition = nil
+      print(s._savedPosition)
+      s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)]._name = s3
+      K.gt(s, s1, s2)
+    end
   }
 }
 
