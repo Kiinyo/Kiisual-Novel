@@ -213,18 +213,21 @@ Kii.Render = {
     local r, g, b = Kii.Render.colorFind(element.Dimensions._color)
     local a = element.Dimensions._alpha
     -- Shaders
-    if element.Shader._type == "Lighten" then
-      -- Lighten animation!
-      -- Lightens to white over 100 frames
-      -- Modifier [0 - 1] determines how close to white
-      local newR, newG, newB = Kii.Render.colorFind("White")
+    if element.Shader._type == "Fade To" then
+      local newR, newG, newB = Kii.Render.colorFind(element.Shader._target)
   
-      r = Kii.Math.clamp(r + ((newR - r) * (element.Shader._frame / 100)) * element.Shader._modifier, r, newR)
-      g = Kii.Math.clamp(g + ((newG - g) * (element.Shader._frame / 100)) * element.Shader._modifier, g, newG)
-      b = Kii.Math.clamp(b + ((newB - b) * (element.Shader._frame / 100)) * element.Shader._modifier, b, newB)
+      r = Kii.Math.clamp(r + ((newR - r) * (element.Shader._frame / element.Shader._modifier)), r, newR)
+      g = Kii.Math.clamp(g + ((newG - g) * (element.Shader._frame / element.Shader._modifier)), g, newG)
+      b = Kii.Math.clamp(b + ((newB - b) * (element.Shader._frame / element.Shader._modifier)), b, newB)
   
-      if element.Shader._frame < 100 then
+      if element.Shader._frame < element._modifier then
         element.Shader._frame = element.Shader._frame + 1
+      else
+        element.Dimensions._color = element.Shader._target
+        element.Shader._frame = 0
+        element.Shader._modifier = 1
+        element.Shader._type = "None"
+        element.Shader._target = "None"
       end
     elseif element.Shader._type == "Darken" then
       -- Darken animation!
@@ -257,6 +260,19 @@ Kii.Render = {
       if element.Shader._frame < 10 then element.Shader._frame = element.Shader._frame + 1
       else
         element._deleteMe = true
+      end
+    elseif element.Shader._type == "Lighten" then
+      -- Change color animation!
+      -- Lightens to white over 100 frames
+      -- Modifier [0 - 1] determines how close to white
+      local newR, newG, newB = Kii.Render.colorFind("White")
+  
+      r = Kii.Math.clamp(r + ((newR - r) * (element.Shader._frame / 100)) * element.Shader._modifier, r, newR)
+      g = Kii.Math.clamp(g + ((newG - g) * (element.Shader._frame / 100)) * element.Shader._modifier, g, newG)
+      b = Kii.Math.clamp(b + ((newB - b) * (element.Shader._frame / 100)) * element.Shader._modifier, b, newB)
+  
+      if element.Shader._frame < 100 then
+        element.Shader._frame = element.Shader._frame + 1
       end
     end
   
@@ -352,9 +368,6 @@ Kii.Audio = {
     Generic_Male = love.audio.newSource("kii/media/audio/sfx/Generic_Male.wav", "static"),
     Generic_Female = love.audio.newSource("kii/media/audio/sfx/Generic_Female.wav", "static")
   },
-  playSFX = function (sfx)
-    Kii.Audio.SFX[sfx]:play()
-  end
 }
 
 Kii.Element = {
@@ -403,7 +416,8 @@ Kii.Element = {
       Shader = {
         _type = template.Shader._type or "None",
         _frame = template.Shader._frame or 0,
-        _modifier = template.Shader._modifier or 1
+        _modifier = template.Shader._modifier or 1,
+        _target = template.Shader._target or "None"
       },
       Actions = {
         -- Mouse press the object
@@ -1029,7 +1043,8 @@ Kii.Containers = {
     Elements = {
       Kii.Elements.Debug.Shadow,
       Kii.Elements.Debug.Body,
-      Kii.Elements.Debug.Header
+      Kii.Elements.Debug.Header,
+      Kii.Elements.Debug.ExitButton
     }
   },
   Simple = {
@@ -1052,9 +1067,12 @@ Kii.Containers = {
         Kii.Elements.Simple.History
       }
     }
-  },
-  Backgrounds = {
-    SimpleRed = {
+  }
+}
+
+Kii.Visuals = {
+  Background = {
+    Simple = {
       _name = "Simple Background",
       _type = "Background",
       Position = {
@@ -1071,25 +1089,7 @@ Kii.Containers = {
       Elements = {
         Kii.Elements.Simple.Box
       }
-    },
-    SimpleYellow = {
-      _name = "Simple Background",
-      _type = "Background",
-      Position = {
-        _x = 0,
-        _y = 0
-      },
-      Dimensions = {
-        _height = 720,
-        _width = 1280
-      },
-      Colors = {
-        _primary = "Yellow"
-      },
-      Elements = {
-        Kii.Elements.Simple.Box
-      }
-    },
+    }
   }
 }
 
@@ -1145,7 +1145,7 @@ Kii.Scene = {
       index = index + 1
     end
   
-    K.ePg(scene, scene.Script._current, scene.Script._index)
+    K.ePge(scene, scene.Script._current, scene.Script._index)
   
     return scene
   
@@ -1217,7 +1217,7 @@ Kii.Scene = {
   end,
   -- Playes a character's voice
   playVoice = function (scene)
-    if scene.Audio._voice ~= nil then Kii.Audio.playSFX(scene.Audio._voice) end
+    if scene.Audio._voice ~= nil then K.eSfx(scene.Audio._voice) end
   end,
   -- Given an x and y coordinate, returns the element if interactive
   findElement = function (scene, x, y)
@@ -1367,7 +1367,7 @@ Kii.Scene = {
           if scene.Text._frame < string.len(scene.Text._text) then
             scene.Text._frame = string.len(scene.Text._text) - 1
           else
-            K.sPg(scene)
+            K.sPge(scene)
           end
         end
         scene._mouseDown = nil
@@ -1538,7 +1538,7 @@ K = {
 
   -- Executes the indicated page
   -- If no arguments are given, executes the scene's current page
-  ePg = function (scene, chapter, page)
+  ePge = function (scene, chapter, page)
     chapter = chapter or scene.Script._current
     page = page or scene.Script._index
 
@@ -1547,18 +1547,18 @@ K = {
   end,
   -- Sets the scene's current page and executes
   -- If no arguments are given, goes to the next page
-  sPg = function (scene, chapter, page, dontExecute)
+  sPge = function (scene, chapter, page, dontExecute)
     scene.Script._current = chapter or scene.Script._current
     scene.Script._index = page or scene.Script._index + 1
 
     if dontExecute == nil then
-      K.ePg(scene)
+      K.ePge(scene)
     end
   end,
 
   -- Sets the Scene's current text
   -- Returns the Scene's previous text
-  sTx = function (scene, text, style)
+  sTxt = function (scene, text, style)
     local previousText = scene.Text._text
     Kii.Scene.changeText(scene, text, style)
     return previousText
@@ -1566,9 +1566,9 @@ K = {
 
   -- Sets the Scene's current speaker
   -- Returns the Scene's previous speaker's {name, color, voice}
-  sSk = function (scene, speaker, text, style)
+  sSpk = function (scene, speaker, text, style)
     -- Prepping the previous speaker
-    local previousSpeaker = K.gTb(scene)
+    local previousSpeaker = K.gTbx(scene)
     if previousSpeaker then 
       previousSpeaker = {
         scene.Containers[previousSpeaker]._name,
@@ -1585,7 +1585,7 @@ K = {
     )
     -- Writing the new line if one exists!
     if text then
-      K.sTx(scene, text, style)
+      K.sTxt(scene, text, style)
     end
 
     return previousSpeaker
@@ -1593,22 +1593,26 @@ K = {
 
   -- Gets the index of the current Text Box
   -- returns index of Text Box in scene.Containers
-  gTb = function (scene)
+  gTbx = function (scene)
     return Kii.Scene.findIndex(scene, scene.Text._textBox)
+  end,
+
+  -- Executes a specified sound effect
+  eSfx = function (soundEffect)
+    Kii.Audio.SFX[soundEffect]:play()
   end,
 
   -- Sets a Flag for the Scene
   -- If no contents given, clears flag
   -- Returns any previous contents of the flag
-  sFl = function (scene, flag, contents)
+  sFlg = function (scene, flag, contents)
     local previousContents = scene.Flags[flag]
     scene.Flags[flag] = contents
     return previousContents
   end,
-
   -- Checks if a Flag exists
   -- Returns the contents of the flag
-  cFl = function (scene, flag)
+  cFlg = function (scene, flag)
     return scene.Flags[flag]
   end,
 
@@ -1616,18 +1620,18 @@ K = {
 
 Kii.Scripts = {
   Debug = {
-    function (s) K.sSk(s, "Kiinyo", "Hello, is this thing on?") end,
+    function (s) K.sSpk(s, "Kiinyo", "Hello, is this thing on?") end,
     function (s) 
-      if K.cFl(s, "Loop") then
-        K.sFl(s, "Loop", K.cFl(s, "Loop") + 1)
+      if K.cFlg(s, "Loop") then
+        K.sFlg(s, "Loop", K.cFlg(s, "Loop") + 1)
       else
-        K.sFl(s, "Loop", 1)
+        K.sFlg(s, "Loop", 1)
       end
-      K.sPg(s)
+      K.sPge(s)
     end,
-    function (s) K.sTx(s, "Looks like we're on Loop: " .. tostring(K.cFl(s, "Loop"))) end,
-    function (s) K.sTx(s, "Back to the start we go!") end,
-    function (s) K.sPg(s, "Debug", 1) end
+    function (s) K.sTxt(s, "Looks like we're on Loop: " .. tostring(K.cFlg(s, "Loop"))) end,
+    function (s) K.sTxt(s, "Back to the start we go!") end,
+    function (s) K.sPge(s, "Debug", 1) end
   },
 }
 
