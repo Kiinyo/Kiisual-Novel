@@ -1166,18 +1166,15 @@ Kii.Scene = {
   end,
   addSprite = function (scene, sprite, position, animation, length)
     length = length or 25
-    local y = love.graphics.getHeight() - sprite.Dimensions._height
-    local x = position
+    local y = math.floor(love.graphics.getHeight() / 7) + 5
+    local x = position or 900
+
+    x = x - sprite.Dimensions._width / 2
+
+    Kii.Container.setPosition(sprite, x, y)
 
     if animation == "Fade In" then
-      local index = 1
-      while index <= #sprite.Elements do
-        sprite.Elements[index].Shader._type = "Fade In"
-        sprite.Elements[index].Shader._frame = 0
-        sprite.Elements[index].Shader._modifier = length
-        index = index + 1
-      end
-      Kii.Container.setPosition(sprite, x, y)
+      Kii.Container.setShader(sprite, animation, length)
     elseif animation == "Stage Right" then
       Kii.Container.setPosition(
         sprite,
@@ -1195,6 +1192,7 @@ Kii.Scene = {
     end
 
     scene.Visual.Sprites[sprite._name] = Kii.Scene.addContainer(scene, sprite)
+    return scene.Visual.Sprites[sprite._name]
   end,
   removeSprite = function (scene, spriteName)
     Kii.Scene.removeContainer(scene, scene.Visual.Sprites[spriteName])
@@ -1458,8 +1456,8 @@ Kii.Sprite = {
       _name = name,
       _type = "Sprite",
       Dimensions = {
-        _height = 600,
-        _width = 300
+        _height = math.floor(love.graphics.getHeight() * (6 / 7)),
+        _width = math.floor(love.graphics.getHeight() * (6 / 7) / 2)
       }
     })
     sprite.Sprite = {
@@ -1621,7 +1619,7 @@ K = {
   cBga = function (scene)
     return scene.Visual._bg
   end,
-  -- Sets the current Background
+  -- Sets the current Background while removing the old one
   sBga = function (scene, Background, animation, time)
     time = time or 0
     Background = Kii.Container.create(Kii.Visuals.Background[Background])
@@ -1680,6 +1678,25 @@ K = {
 
     Kii.Scene.addContainer(scene, Background)
   end,
+
+  -- Adds a Character to the scene
+  -- Returns the ID of the Character's sprite
+  aCha = function (scene, Character, Emotion, position, animation, variant)
+    local character = Kii.Script.Characters[Character].Sprite
+    variant = variant or "Default"
+    local sprite = Kii.Sprite.create(character, variant, Emotion)
+    return Kii.Scene.addSprite(scene, sprite, position, animation)
+  end,
+
+  rCha = function (scene, character, animation, length)
+    character = Kii.Script.Characters[character].Sprite
+    Kii.Container.selfDestruct(
+      scene.Containers[Kii.Scene.findIndex(scene, scene.Visual.Sprites[character])],
+      length,
+      animation
+    )
+  end,
+
   -- Sets a Flag for the Scene
   -- If no contents given, clears flag
   -- Returns any previous contents of the flag
@@ -1720,6 +1737,11 @@ Kii.Scripts = {
         s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)].Elements[1].Dimensions._color = "Blue"
       end
     end,
+    function (s) K.sTxt(s, "Now let's add a character") end,
+    function (s) K.aCha(s, "Default", "Default") end,
+    function (s) K.sTxt(s, "And then remove it!") end,
+    function (s) K.rCha(s, "Default", "Fade Out", 100) end,
+
     function (s) K.sTxt(s, "Back to the start we go!") end,
     function (s) K.sPge(s, "Debug", 1) end
   },
