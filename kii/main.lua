@@ -128,6 +128,21 @@ Kii.Render = {
                   math.floor(x + width * (7/8)), y,
                   x + width, y + height,
                   x, y + height}
+    elseif shape == "Fancy Body" then
+      vertices = {x, y + height * 5/16,
+                  x + width, y,
+                  x + width * (7/8), y + height * (7/8),
+                  x + width / 16, y + height * (13/16)}
+    elseif shape == "Fancy Header" then
+      vertices = {x, y,
+                  x + width, y + height / 8,
+                  x + width, y + height,
+                  x, y + height}
+
+    elseif shape == "Fancy Decoration" then
+      vertices = {x, y,
+                  x + width, y,
+                  x, y + height}
     elseif shape == "Shadow" then
       vertices = {x + width, y + 10,
                   x + width + 10, y + 10,
@@ -255,9 +270,9 @@ Kii.Render = {
       -- Fading out animation!
       -- Duration: 10 frames for full effect!
       -- Effect decreases the Alpha from 100% to 0%
-      a = a * Kii.Math.clamp(1 - (1 * (element.Shader._frame / 10)), 0, 1) -- Alpha calculation
+      a = a * Kii.Math.clamp(1 - (1 * (element.Shader._frame / element.Shader._modifier)), 0, 1) -- Alpha calculation
       -- Increment frame if it's less than 10!
-      if element.Shader._frame < 10 then element.Shader._frame = element.Shader._frame + 1
+      if element.Shader._frame < element.Shader._modifier then element.Shader._frame = element.Shader._frame + 1
       else
         element._deleteMe = true
       end
@@ -289,6 +304,37 @@ Kii.Render = {
       y = math.floor(y + element.Animation._modifier * math.random() - element.Animation._modifier / 2)
     elseif element.Animation._type == "Press" then
       y = y + element.Dimensions._height / 16
+    elseif element.Animation._type == "Slide Right" then
+      x = x + element.Animation._frame
+      if element.Animation._frame < element.Animation._modifier then
+        element.Animation._frame = element.Animation._frame + 1
+      end
+    elseif element.Animation._type == "Press Right" then
+      x = x + 10
+    elseif element.Animation._type == "Return Right" then
+      x = x + element.Animation._frame
+      if element.Animation._frame <= 0 then
+        element.Animation._frame = 0
+        element.Animation._modifier = 1
+        element.Animation._type = "None"
+      else
+        element.Animation._frame = element.Animation._frame - 1
+      end
+
+    elseif element.Animation._type == "Slide Down" then
+      y = y + element.Animation._frame
+      if element.Animation._frame < element.Animation._modifier then
+        element.Animation._frame = element.Animation._frame + 1
+      end
+    elseif element.Animation._type == "Return Down" then
+      y = y + element.Animation._frame
+      if element.Animation._frame <= 0 then
+        element.Animation._frame = 0
+        element.Animation._modifier = 1
+        element.Animation._type = "None"
+      else
+        element.Animation._frame = element.Animation._frame - 1
+      end
     end
     return x, y, width, height
   end,
@@ -447,6 +493,60 @@ Kii.Element = {
 }
 
 Kii.Element.Actions = {
+  FancyPress = function (self, container, scene)
+    if K.cFlg(scene, "Presses") == nil then
+      K.sFlg(scene, "Presses", 1)
+      container._text = "You've clicked my button 1 time!"
+    elseif K.cFlg(scene, "Presses") == 1 then
+      K.sFlg(scene, "Presses", 2)
+      container._text = "You've clicked my button twice now!"
+    elseif K.cFlg(scene, "Presses") > 1 and K.cFlg(scene, "Presses") < 10 then
+      K.sFlg(scene, "Presses", K.cFlg(scene, "Presses") + 1)
+      container._text = tostring(K.cFlg(scene, "Presses")).." times now."
+    else
+      container._text = "There's more of the demo left you know..."
+    end
+
+  end,
+  FancyWarn = function (self, container, scene)
+    self.Animation._type = "Slide Down"
+    self.Animation._modifier = 10
+    if scene.Script._index < 60 then
+      K.sPge(scene, "Debug", 61)
+    end
+  end,
+  FancyJoke = function (self, container, scene)
+    self.Shader._type = "None"
+    self.Shader._modifier = 1
+    self.Shader._frame = 0
+    K.sPge(scene, "Debug", 64)
+  end,
+  Glow = function (self, container, scene)
+    self.Shader._type = "Lighten"
+    self.Shader._frame = 0
+    self.Shader._modifier = 0.5
+  end,
+  SlideRight = function (self, container, scene)
+    self.Animation._type = "Slide Right"
+    self.Animation._modifier = 10
+  end,
+  ReturnRight = function (self, container, scene)
+    self.Animation._type = "Return Right"
+  end,
+  SlideDown = function (self, container, scene)
+    self.Animation._type = "Slide Down"
+    self.Animation._modifier = 10
+  end,
+  ReturnDown = function (self, container, scene)
+    self.Animation._type = "Return Down"
+  end,
+  FancyDeleteContainer = function (self, container, scene)
+    scene._mouseOver = nil
+    scene._mouseDown = nil
+    scene._mouseUp = nil
+    Kii.Scene.removeContainer(scene, container._id)
+    K.sPge(scene, "Debug", 66)
+  end,
   QuitGame = function (self, container, scene)
     love.event.quit()
   end,
@@ -580,7 +680,7 @@ Kii.Elements = {
         _alignY = "Up"
       },
       Text = {
-        _text = "X"
+        _text = "@None"
       },
       Actions = {
         down = "Press",
@@ -591,6 +691,154 @@ Kii.Elements = {
         leave = "Reset",
       }
     }
+  },
+  Fancy = {
+    Shadow = {
+      _name = "Fancy Shadow",
+      _type = "Shadow",
+      Dimensions = {
+        _color = "Black",
+        _shape = "Fancy Body"
+      },
+      Position = {
+        _xOffset = 20,
+        _yOffset = 20,
+        _x = 0.0625,
+        _y = 0.0625,
+      },
+      Text = {
+        _text = "@None"
+      }
+    },
+    Decoration = {
+      _name = "Fancy Decoration",
+      _type = "Decoration",
+      Dimensions = {
+        _padding = 30,
+        _shape = "Fancy Decoration",
+        _color = "Primary",
+        _width = 1/4,
+        _height = 1/2
+      },
+      Position = {
+        _alignX = "Center",
+        _alignY = "Down",
+        _x = 5/16
+      },
+      Text = {
+        _text = "@None",
+        _color = "Black"
+      }
+    },
+    Body = {
+      _name = "Fancy Body",
+      _type = "Body",
+      Dimensions = {
+        _padding = 30,
+        _shape = "Fancy Body",
+        _color = "Primary"
+      },
+      Text = {
+        _color = "Black"
+      }
+    },
+    Header = {
+      _name = "Fancy Header",
+      _type = "Header",
+      Dimensions = {
+        _width = 3/8,
+        _height = 1/4,
+        _shape = "Fancy Header",
+        _color = "Accent"
+      },
+      Position = {
+        _x = 1/16,
+        _y = 1/16
+      }
+    },
+    CloseButton = {
+      _name = "Fancy Close Button",
+      _type = "Button",
+      _interactive = true,
+      Dimensions = {
+        _height = 1/2,
+        _width = 1/8,
+        _shape = "Rounded Box",
+        _color = "Red"
+      },
+      Position = {
+        _alignX = "Right",
+        _alignY = "Center",
+      },
+      Text = {
+        _text = "@None",
+        _color = "Black"
+      },
+      Actions = {
+        down = "Glow",
+        up = "None",
+        click = "FancyDeleteContainer",
+        abandon = "Reset",
+        over = "SlideRight",
+        leave = "ReturnRight",
+      }
+    },
+    Button1 = {
+      _name = "Fancy Button 1",
+      _type = "Button",
+      _interactive = true,
+      Dimensions = {
+        _width = 7/32,
+        _height = 1/4,
+        _shape = "Rounded Box",
+        _color = "Blue"
+      },
+      Position = {
+        _x = 5/32,
+        _alignX = "Left",
+        _alignY = "Down",
+      },
+      Text = {
+        _text = "\nClick Me!"
+      },
+      Actions = {
+        down = "Glow",
+        up = "None",
+        click = "FancyPress",
+        abandon = "Reset",
+        over = "SlideDown",
+        leave = "ReturnDown",
+      }
+    },
+    Button2 = {
+      _name = "Fancy Button 1",
+      _type = "Button",
+      _interactive = true,
+      Dimensions = {
+        _width = 7/32,
+        _height = 1/4,
+        _shape = "Rounded Box",
+        _color = "Blue"
+      },
+      Position = {
+        _x = 13/32,
+        _alignX = "Left",
+        _alignY = "Down",
+      },
+      Text = {
+        _text = "\nDon't Click Me!"
+      },
+      Actions = {
+        down = "Glow",
+        up = "None",
+        click = "FancyJoke",
+        abandon = "Reset",
+        over = "FancyWarn",
+        leave = "ReturnDown",
+      }
+    }
+
+
   },
   Simple = {
     Box = {
@@ -1083,6 +1331,28 @@ Kii.Containers = {
       Kii.Elements.Debug.Body,
       Kii.Elements.Debug.Header,
       Kii.Elements.Debug.ExitButton
+    }
+  },
+  Fancy = {
+    _name = "Fancy Box",
+    _type = "Fancy Box",
+    _text = "Graphic Design is my passion",
+    Position = {
+      _x = 190,
+      _y = 100
+    },
+    Dimensions = {
+      _height = 300,
+      _width = 900
+    },
+    Elements = {
+      Kii.Elements.Fancy.Shadow,
+      Kii.Elements.Fancy.Decoration,
+      Kii.Elements.Fancy.CloseButton,
+      Kii.Elements.Fancy.Button1,
+      Kii.Elements.Fancy.Button2,
+      Kii.Elements.Fancy.Body,
+      Kii.Elements.Fancy.Header
     }
   },
   Simple = {
@@ -1836,6 +2106,15 @@ K = {
     end
   end,
 
+  aCon = function (scene, container, x, y, animation, time)
+    container = Kii.Container.create(Kii.Containers[container])
+
+    Kii.Container.setPosition(container, x, y, true)
+
+    return Kii.Scene.addContainer(scene, container)
+
+  end,
+
   -- Sets a Flag for the Scene
   -- If no contents given, clears flag
   -- Returns any previous contents of the flag
@@ -1854,7 +2133,9 @@ K = {
 
 Kii.Scripts = {
   Debug = {
+    -- 1 - 10
     function (s) K.sSpk(s, "Kiinyo", "Hey there and welcome to my VN frameworks's tech demo!") end,
+    function (s) K.sPge(s) end,
     function (s) 
       if K.cFlg(s, "Loop") then
         K.sFlg(s, "Loop", K.cFlg(s, "Loop") + 1)
@@ -1880,6 +2161,7 @@ Kii.Scripts = {
     end,
     function (s) K.sTxt(s, "Now let's add a character") end,
     function (s) K.aCha(s, "Default", "Default", 800, "Stage Left", 30) end,
+    -- 11 - 20
     function (s) K.sTxt(s, "And zoom in on them...") end,
     function (s) K.tCha(s, "Default", "Zoom", 2, 30) end,
     function (s) K.sTxt(s, "Jitter them around!") end,
@@ -1890,6 +2172,7 @@ Kii.Scripts = {
     function (s) K.sCha(s, "Default", "None", 1, "Animation") end,
     function (s) K.sTxt(s, "Let's change the emotion to happy!") end,
     function (s) K.sCha(s, "Default", "Happy") end,
+    -- 21 - 30
     function (s) K.sTxt(s, "And sad! ;~;") end,
     function (s) K.sCha(s, "Default", "Sad") end,
     function (s) K.sTxt(s, "And then zoom back out...") end,
@@ -1900,6 +2183,7 @@ Kii.Scripts = {
     function (s) K.sTxt(s, "Along the Y...") end,
     function (s) K.mCha(s, "Default", nil, 500, 10) end,
     function (s) K.sTxt(s, "Now let's get it back to where it was") end,
+    -- 31 - 40
     function (s) 
       local x = K.cFlg(scene, "Original Position")[1] 
       local y = K.cFlg(scene, "Original Position")[2] 
@@ -1907,23 +2191,66 @@ Kii.Scripts = {
     end,
     function (s) K.sTxt(s, "Oh and we can flip too!") end,
     function (s) K.tCha(s, "Default", "Flip", nil, 0) end,
+
     function (s) K.sTxt(s, "And then remove it!") end,
     function (s) K.rCha(s, "Default", "Fade Out", 10) end,
     function (s) K.aCha(s, "Default", "Happy", 640, "Stage Right", 10) end,
+
     function (s) K.sTxt(s, "Or not!") end,
     function (s) K.rCha(s, "Default", "Stage Left", 10) end,
     function (s) K.sTxt(s, "It's entirely up to you!") end,
     function (s) K.sTxt(s, "There's also a bunch of UI things we can do!") end,
+    -- 41 - 50
     function (s) K.sTxt(s, "Like shrinking the text box...") end,
-    function (s) K.tTbx(s, 700, nil, 10) end,
+    function (s) K.tTbx(s, 700, 200, 10) end,
     function (s) K.sTxt(s, "Oh, while I'm here I can show you how the textwrapping works in real time even if you're resizing!") end,
+
     function (s) K.tTbx(s, 900, nil, 100) end,
     function (s) K.sTxt(s, "Fun stuff!") end,
     function (s) K.sTxt(s, "Oh and obviously we can move the text box around if we want to") end,
+
     function (s) K.mTbx(s, 300, 300, 10) end,
     function (s) K.sTxt(s, "Haven't quite thought of a use for it yet but it's cool to have!") end,
-    function (s) K.sTxt(s, "Oh, I can also remove elements if I want to!") end,
-    function (s) K.sTxt(s, "Back to the start we go!") end,
+    function (s) K.sTxt(s, "Oh, you can also remove elements if you want to!") end,
+    function (s) 
+      s.Containers[K.gTbx(s)].Elements[4].Shader._type = "Fade Out"
+      s.Containers[K.gTbx(s)].Elements[4].Shader._frame = 0
+      s.Containers[K.gTbx(s)].Elements[4].Shader._modifier = 10
+    end,
+    -- 51 - 60
+    function (s) K.sTxt(s, "Unfortunately this is super specific and I'm not sure how to make a sensible API for it so you'll have to do it by hand for now.") end,
+    function (s) K.sTxt(s, "Let's just add that back...") end,
+    function (s) 
+      local element = Kii.Element.create(Kii.Elements.Debug.ExitButton)
+      element.Shader._type = "Fade In"
+      element.Shader._frame = 0
+      element.Shader._modifier = 25
+      Kii.Container.addElement(s.Containers[K.gTbx(s)], element)
+    end,
+
+    function (s) K.sTxt(s, "And fix the text box") end,
+    function (s) K.mTbx(s, 40, 500, 20) K.tTbx(s, 1200, 150, 20) end,
+    function (s) K.sTxt(s, "Now we can see about adding another another UI element!") end,
+
+    function (s) K.aCon(s, "Fancy") end,
+    function (s) K.sTxt(s, "There we go!") end,
+    function (s) K.sTxt(s, "Feel free to play around with it and click the red tab when you're ready to move on!") end,
+    function (s) K.sPge(s, "Debug", 59) end,
+    -- 61 - 70
+    function (s) K.sTxt(s, "!!!") end,
+    function (s) K.sTxt(s, "Be careful, it'll delete system32!") end,
+    function (s) K.sPge(s, "Debug", 59) end,
+
+    function (s) K.sTxt(s, "Just kidding, it's useless!") end,
+    function (s) K.sPge(s, "Debug", 59) end,
+    function (s) K.sTxt(s, "Awesome!") end,
+
+    function (s) K.sTxt(s, "So as you can see, there's a whole bunch of stuff you can wire through UI elements!") end,
+    function (s) K.sTxt(s, "And with that I think that concludes this demo, I hope you've enjoyed yourself!") end,
+    function (s) K.sTxt(s, "Oh, before I forget, you can right click to see the chat history.") end,
+    function (s) K.sTxt(s, "There's a bit of an easter egg in the first couple of lines after the script resets to show off flags, but other than that thanks so much again for checking this out!") end,
+
+    function (s) K.sTxt(s, "See you next time!") end,
     function (s) K.sPge(s, "Debug", 1) end
   },
 }
