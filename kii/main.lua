@@ -1419,7 +1419,7 @@ Kii.Scene = {
       _pause = template._pause or nil,
       _id = template._id or 1, -- Gives every container an ID
       History = {
-        _length = template.History._length or 20, -- How many lines back the history can remember
+        _length = template.History._length or 15, -- How many lines back the history can remember
         Log = template.History.Log or {}
       },
       Script = {
@@ -2108,6 +2108,8 @@ K = {
 
   aCon = function (scene, container, x, y, animation, time)
     container = Kii.Container.create(Kii.Containers[container])
+    x = x or container.Position._x
+    y = y or container.Position._y
 
     Kii.Container.setPosition(container, x, y, true)
 
