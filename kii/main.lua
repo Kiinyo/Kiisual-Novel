@@ -962,8 +962,8 @@ Kii.Container = {
     )
     
     container.Reposition._type = type or "Linear"
-    container.Reposition._targetX = x or 0
-    container.Reposition._targetY = y or 0
+    container.Reposition._targetX = x or container.Position._x
+    container.Reposition._targetY = y or container.Position._y
     container.Reposition._frame = time or 10
   end,
 
@@ -1042,8 +1042,8 @@ Kii.Container = {
     )
 
     container.Resize._type = type or "Linear"
-    container.Resize._targetWidth = width or 100
-    container.Resize._targetHeight = height or 100
+    container.Resize._targetWidth = width or container.Dimensions._width
+    container.Resize._targetHeight = height or container.Dimensions._height
     container.Resize._frame = time or 10
   end,
   flip = function (container, length)
@@ -1149,7 +1149,7 @@ Kii.Scene = {
       _pause = template._pause or nil,
       _id = template._id or 1, -- Gives every container an ID
       History = {
-        _length = template.History._length or 15, -- How many lines back the history can remember
+        _length = template.History._length or 20, -- How many lines back the history can remember
         Log = template.History.Log or {}
       },
       Script = {
@@ -1493,8 +1493,6 @@ Kii.Sprite = {
         _y = y
       }
     })
-    print("Sprite x:"..tostring(sprite.Position._x))
-    print("Sprite targetX:".. tostring(sprite.Reposition._targetX))
     sprite.Sprite = {
       _base = nil,
       _expression = nil,
@@ -1651,6 +1649,16 @@ K = {
   -- returns index of Text Box in scene.Containers
   gTbx = function (scene)
     return Kii.Scene.findIndex(scene, scene.Text._textBox)
+  end,
+
+  mTbx = function (scene, x, y, time)
+    time = time or 20
+    Kii.Container.move(scene.Containers[K.gTbx(scene)], x, y, time)
+  end,
+
+  tTbx = function (scene, width, height, time)
+    time = time or 20
+    Kii.Container.scale(scene.Containers[K.gTbx(scene)], width, height, time)
   end,
 
   -- Executes a specified sound effect
@@ -1823,6 +1831,8 @@ K = {
         Kii.Scene.getSprite(scene, character).Reposition._targetY,
         speed
       )
+    elseif type == "Flip" then
+      Kii.Container.flip(Kii.Scene.getSprite(scene, character), speed)
     end
   end,
 
@@ -1844,7 +1854,7 @@ K = {
 
 Kii.Scripts = {
   Debug = {
-    function (s) K.sSpk(s, "Kiinyo", "Hello, is this thing on?") end,
+    function (s) K.sSpk(s, "Kiinyo", "Hey there and welcome to my VN frameworks's tech demo!") end,
     function (s) 
       if K.cFlg(s, "Loop") then
         K.sFlg(s, "Loop", K.cFlg(s, "Loop") + 1)
@@ -1853,14 +1863,16 @@ Kii.Scripts = {
       end
       K.sPge(s)
     end,
-    function (s) K.sTxt(s, "Looks like we're on Loop: " .. tostring(K.cFlg(s, "Loop"))) end,
-    function (s) K.sTxt(s, "Now let's set a background") end,
+    function (s) K.sTxt(s, "Looks like we're on loop " .. tostring(K.cFlg(s, "Loop"))) end,
+    function (s) if (K.cFlg(s, "Loop") == 1) then K.sTxt(s, "Oh, that means it's your first time! Hello!") else K.sTxt(s, "It's nice to see you again!") end end,
+    function (s) K.sTxt(s, "I guess we'd better get started!") end,
+    function (s) K.sTxt(s, "First let's get a background going...") end,
     function (s) 
-      if K.cFlg(s, "Loop") % 3 == 0 then
+      if K.cFlg(s, "Loop") % 3 == 1 then
         K.sBga(s, "Simple", "Zoom In", 100)
-      elseif K.cFlg(s, "Loop") % 3 == 1 then
-        K.sBga(s, "Simple", "Stage Left", 100)
         s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)].Elements[1].Dimensions._color = "Yellow"
+      elseif K.cFlg(s, "Loop") % 3 == 0 then
+        K.sBga(s, "Simple", "Stage Left", 100)
       else
         K.sBga(s, "Simple", "Fade In", 100)
         s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)].Elements[1].Dimensions._color = "Blue"
@@ -1893,8 +1905,24 @@ Kii.Scripts = {
       local y = K.cFlg(scene, "Original Position")[2] 
       K.mCha(s, "Default", x, y, 20, true) 
     end,
+    function (s) K.sTxt(s, "Oh and we can flip too!") end,
+    function (s) K.tCha(s, "Default", "Flip", nil, 0) end,
     function (s) K.sTxt(s, "And then remove it!") end,
-    function (s) K.rCha(s, "Default", "Fade Out", 30) end,
+    function (s) K.rCha(s, "Default", "Fade Out", 10) end,
+    function (s) K.aCha(s, "Default", "Happy", 640, "Stage Right", 10) end,
+    function (s) K.sTxt(s, "Or not!") end,
+    function (s) K.rCha(s, "Default", "Stage Left", 10) end,
+    function (s) K.sTxt(s, "It's entirely up to you!") end,
+    function (s) K.sTxt(s, "There's also a bunch of UI things we can do!") end,
+    function (s) K.sTxt(s, "Like shrinking the text box...") end,
+    function (s) K.tTbx(s, 700, nil, 10) end,
+    function (s) K.sTxt(s, "Oh, while I'm here I can show you how the textwrapping works in real time even if you're resizing!") end,
+    function (s) K.tTbx(s, 900, nil, 100) end,
+    function (s) K.sTxt(s, "Fun stuff!") end,
+    function (s) K.sTxt(s, "Oh and obviously we can move the text box around if we want to") end,
+    function (s) K.mTbx(s, 300, 300, 10) end,
+    function (s) K.sTxt(s, "Haven't quite thought of a use for it yet but it's cool to have!") end,
+    function (s) K.sTxt(s, "Oh, I can also remove elements if I want to!") end,
     function (s) K.sTxt(s, "Back to the start we go!") end,
     function (s) K.sPge(s, "Debug", 1) end
   },
