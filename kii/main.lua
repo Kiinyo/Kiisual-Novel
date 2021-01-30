@@ -665,19 +665,20 @@ Kii.Container = {
         _detail = template.Colors._detail or "Black",
         _speaker = template.Colors._speaker or "White",
       },
-      Resize = {
-        _type = template.Resize._type or "None",
-        _frame = template.Resize._frame or 0,
-        _targetWidth = template.Resize._targetWidth or 0,
-        _targetHeight = template.Resize._targetHeight or 0
-      },
-      Reposition = {
-        _type = template.Reposition._type or "None",
-        _frame = template.Reposition._frame or 0,
-        _targetX = template.Reposition._targetX or 0,
-        _targetY = template.Reposition._targetY or 0
-      },
       Elements = {}
+    }
+
+    container.Resize = {
+      _type = template.Resize._type or "None",
+      _frame = template.Resize._frame or 0,
+      _targetWidth = template.Resize._targetWidth or container.Dimensions._width,
+      _targetHeight = template.Resize._targetHeight or container.Dimensions._height
+    }
+    container.Reposition = {
+      _type = template.Reposition._type or "None",
+      _frame = template.Reposition._frame or 0,
+      _targetX = template.Reposition._targetX or container.Position._x,
+      _targetY = template.Reposition._targetY or container.Position._y
     }
   
     local index = 1
@@ -890,7 +891,7 @@ Kii.Container = {
   end,
 
   -- Place the container at x, y
-  setPosition = function (container, x, y)
+  setPosition = function (container, x, y, setTarget)
     local xDis = container.Position._x - x
     local yDis = container.Position._y - y
   
@@ -902,6 +903,11 @@ Kii.Container = {
     end
     container.Position._x = x
     container.Position._y = y
+
+    if setTarget then
+      container.Reposition._targetX = x
+      container.Reposition._targetY = y
+    end
   end,
   -- Translation function animation
   reposition = function (container)
@@ -932,12 +938,14 @@ Kii.Container = {
           Kii.Math[tween](
             container.Position._x,
             container.Reposition._targetX,
-            container.Reposition._frame
+            container.Reposition._frame,
+            true
           ),
           Kii.Math[tween](
             container.Position._y,
             container.Reposition._targetY,
-            container.Reposition._frame
+            container.Reposition._frame,
+            true
           )
         )
 
@@ -947,6 +955,12 @@ Kii.Container = {
   end,
   -- Ordering the actual animation
   move = function (container, x, y, time, type)
+    Kii.Container.setPosition(
+      container,
+      container.Reposition._targetX,
+      container.Reposition._targetY
+    )
+    
     container.Reposition._type = type or "Linear"
     container.Reposition._targetX = x or 0
     container.Reposition._targetY = y or 0
@@ -954,9 +968,14 @@ Kii.Container = {
   end,
 
   -- Set the container's width and height
-  setDimensions = function (container, width, height)
+  setDimensions = function (container, width, height, setTarget)
     container.Dimensions._width = width
     container.Dimensions._height =  height
+
+    if setTarget then
+      container.Resize._targetWidth = width
+      container.Resize._targetHeight = height
+    end
   
     local index = 1
     while index <= #container.Elements do
@@ -998,12 +1017,14 @@ Kii.Container = {
           Kii.Math[tween](
             container.Dimensions._width,
             container.Resize._targetWidth,
-            container.Resize._frame
+            container.Resize._frame,
+            true
           ),
           Kii.Math[tween](
             container.Dimensions._height,
             container.Resize._targetHeight,
-            container.Resize._frame
+            container.Resize._frame,
+            true
           )
         )
 
@@ -1014,6 +1035,12 @@ Kii.Container = {
   end,
   -- Ordering the actual animation
   scale = function (container, width, height, time, type)
+    Kii.Container.setDimensions(
+      container,
+      container.Resize._targetWidth,
+      container.Resize._targetHeight
+    )
+
     container.Resize._type = type or "Linear"
     container.Resize._targetWidth = width or 100
     container.Resize._targetHeight = height or 100
@@ -1164,14 +1191,10 @@ Kii.Scene = {
   getSprite = function (s, spriteName)
     return s.Containers[Kii.Scene.findIndex(s, s.Visual.Sprites[spriteName])]
   end,
-  addSprite = function (scene, sprite, position, animation, length)
+  addSprite = function (scene, sprite, animation, length)
     length = length or 25
-    local y = math.floor(love.graphics.getHeight() / 7) + 5
-    local x = position or 900
 
-    x = x - sprite.Dimensions._width / 2
-
-    Kii.Container.setPosition(sprite, x, y)
+    local x = sprite.Position._x
 
     if animation == "Fade In" then
       Kii.Container.setShader(sprite, animation, length)
@@ -1179,16 +1202,18 @@ Kii.Scene = {
       Kii.Container.setPosition(
         sprite,
         0 - sprite.Dimensions._width,
-        y
+        sprite.Position._y,
+        true
       )
-      Kii.Container.move(sprite, x, y, length)
+      Kii.Container.move(sprite, x, sprite.Position._y, length)
     elseif animation == "Stage Left" then
       Kii.Container.setPosition(
         sprite,
         love.graphics.getWidth(),
-        y
+        sprite.Position._y,
+        true
       )
-      Kii.Container.move(sprite, x, y, length)
+      Kii.Container.move(sprite, x, sprite.Position._y, length)
     end
 
     scene.Visual.Sprites[sprite._name] = Kii.Scene.addContainer(scene, sprite)
@@ -1451,15 +1476,25 @@ Kii.Scene = {
 }
 
 Kii.Sprite = {
-  create = function (name, base, expression)
+  create = function (name, base, expression, position)
+    local x = position or 800
+    local y = math.floor(love.graphics.getHeight() / 7) + 5
+    x = math.floor(x - love.graphics.getWidth() * (6 / 7) / 4)
+    
     local sprite = Kii.Container.create({
       _name = name,
       _type = "Sprite",
       Dimensions = {
         _height = math.floor(love.graphics.getHeight() * (6 / 7)),
-        _width = math.floor(love.graphics.getHeight() * (6 / 7) / 2)
+        _width = math.floor(love.graphics.getWidth() * (6 / 7) / 2)
+      },
+      Position = {
+        _x = x,
+        _y = y
       }
     })
+    print("Sprite x:"..tostring(sprite.Position._x))
+    print("Sprite targetX:".. tostring(sprite.Reposition._targetX))
     sprite.Sprite = {
       _base = nil,
       _expression = nil,
@@ -1632,7 +1667,12 @@ K = {
     time = time or 0
     Background = Kii.Container.create(Kii.Visuals.Background[Background])
 
-    Kii.Container.setDimensions(Background, love.graphics.getWidth(), love.graphics.getHeight())
+    Kii.Container.setDimensions(
+      Background, 
+      love.graphics.getWidth(),
+      love.graphics.getHeight(),
+      true
+    )
     
     if K.cBga(scene) then
       Kii.Container.selfDestruct(
@@ -1642,6 +1682,18 @@ K = {
     end
 
     if animation == "Zoom In" then
+      Kii.Container.setDimensions(
+        Background,
+        1,
+        1,
+        true
+      )
+      Kii.Container.setPosition(
+        Background,
+        love.graphics.getWidth() / 2,
+        love.graphics.getHeight() / 2,
+        true
+      )
       Kii.Container.scale(
         Background,
         love.graphics.getWidth(),
@@ -1654,29 +1706,21 @@ K = {
         0,
         time
       )
-      Kii.Container.setDimensions(
-        Background,
-        1,
-        1
-      )
-      Kii.Container.setPosition(
-        Background,
-        love.graphics.getWidth() / 2,
-        love.graphics.getHeight() / 2
-      )
 
     elseif animation == "Stage Right" then
       Kii.Container.setPosition(
         Background,
         0 - Background.Dimensions._width,
-        0
+        0,
+        true
       )
       Kii.Container.move(Background, 0, 0, time)
     elseif animation == "Stage Left" then
       Kii.Container.setPosition(
         Background,
         Background.Dimensions._width + 1,
-        0
+        0,
+        true
       )
       Kii.Container.move(Background, 0, 0, time)
 
@@ -1689,11 +1733,12 @@ K = {
 
   -- Adds a Character to the scene
   -- Returns the ID of the Character's sprite
-  aCha = function (scene, Character, Emotion, position, animation, variant)
+  aCha = function (scene, Character, Emotion, position, animation, speed, variant)
     local character = Kii.Script.Characters[Character].Sprite
     variant = variant or "Default"
-    local sprite = Kii.Sprite.create(character, variant, Emotion)
-    return Kii.Scene.addSprite(scene, sprite, position, animation)
+    local sprite = Kii.Sprite.create(character, variant, Emotion, position)
+
+    return Kii.Scene.addSprite(scene, sprite, animation, speed)
   end,
 
   -- Removes a Character from the scene
@@ -1704,6 +1749,26 @@ K = {
       length,
       animation
     )
+  end,
+
+  tCha = function (scene, character, type, magnitude, speed)
+    character = Kii.Script.Characters[character].Sprite
+    local width = Kii.Scene.getSprite(scene, character).Resize._targetWidth
+
+    if type == "Zoom" then
+      Kii.Container.scale(
+        Kii.Scene.getSprite(scene, character),
+        Kii.Scene.getSprite(scene, character).Resize._targetWidth * magnitude,
+        Kii.Scene.getSprite(scene, character).Resize._targetHeight * magnitude,
+        speed
+      )
+      Kii.Container.move(
+        Kii.Scene.getSprite(scene, character),
+        math.floor(Kii.Scene.getSprite(scene, character).Reposition._targetX - ((Kii.Scene.getSprite(scene, character).Resize._targetWidth - width) / 2)),
+        Kii.Scene.getSprite(scene, character).Reposition._targetY,
+        speed
+      )
+    end
   end,
 
   -- Sets a Flag for the Scene
@@ -1747,7 +1812,10 @@ Kii.Scripts = {
       end
     end,
     function (s) K.sTxt(s, "Now let's add a character") end,
-    function (s) K.aCha(s, "Default", "Default") end,
+    function (s) K.aCha(s, "Default", "Default", 800, "Stage Left", 100) end,
+    function (s) K.sTxt(s, "And zoom in on them...") end,
+    function (s) K.tCha(s, "Default", "Zoom", 2, 100) end,
+    function (s) K.tCha(s, "Default", "Zoom", 0.5, 100) end,
     function (s) K.sTxt(s, "And then remove it!") end,
     function (s) K.rCha(s, "Default", "Fade Out", 100) end,
 
