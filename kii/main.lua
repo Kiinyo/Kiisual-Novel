@@ -1068,10 +1068,10 @@ Kii.Containers = {
     _name = "Debug Container",
     _type = "Text Box",
     _text = "Just some debug stuffs",
-    Position = {_x = 100, _y = 100},
+    Position = {_x = 40, _y = 500},
     Dimensions = {
-      _height = 500,
-      _width = 500
+      _height = 150,
+      _width = 1200
     },
     Colors = {
       _primary = "White",
@@ -1770,6 +1770,41 @@ K = {
       Kii.Sprite.changeExpression(Kii.Scene.getSprite(scene, character), animation)
     end
   end,
+  -- Moves a Character in the scene to the designated coordinates
+  -- Can nil x and y coordinates to maintain them
+  -- Returns {oldX, oldY}
+  mCha = function (scene, character, x, y, speed, raw)
+    local oldX = Kii.Scene.getSprite(scene, character).Position._x
+    local oldY = Kii.Scene.getSprite(scene, character).Position._y
+
+    if x ~= nil then
+      if raw then
+      else
+        x = x - Kii.Scene.getSprite(scene, character).Resize._targetWidth / 2
+      end
+      else
+      x = oldX
+    end
+
+    if y ~= nil then
+      if raw then
+      else
+        y = y - Kii.Scene.getSprite(scene, character).Resize._targetHeight / 2
+      end
+      else
+      y = oldY
+    end
+
+    character = Kii.Script.Characters[character].Sprite
+    speed = speed or 30
+
+    Kii.Container.move(
+      Kii.Scene.getSprite(scene, character),
+      x, y, speed
+    )
+
+    return {oldX, oldY}
+  end,
   -- Transforms a Character in the scene
   tCha = function (scene, character, type, magnitude, speed)
     character = Kii.Script.Characters[character].Sprite
@@ -1790,7 +1825,6 @@ K = {
       )
     end
   end,
-
 
   -- Sets a Flag for the Scene
   -- If no contents given, clears flag
@@ -1837,8 +1871,10 @@ Kii.Scripts = {
     function (s) K.sTxt(s, "And zoom in on them...") end,
     function (s) K.tCha(s, "Default", "Zoom", 2, 30) end,
     function (s) K.sTxt(s, "Jitter them around!") end,
+    function (s) K.sCha(s, "Default", "Jitter", 1, "Animation") end,
     function (s) K.sCha(s, "Default", "Jitter", 10, "Animation") end,
-    function (s) K.sTxt(s, "Enough of that.") end,
+    function (s) K.sCha(s, "Default", "Jitter", 100, "Animation") end,
+    function (s) K.sTxt(s, "Ehehe.") end,
     function (s) K.sCha(s, "Default", "None", 1, "Animation") end,
     function (s) K.sTxt(s, "Let's change the emotion to happy!") end,
     function (s) K.sCha(s, "Default", "Happy") end,
@@ -1846,9 +1882,19 @@ Kii.Scripts = {
     function (s) K.sCha(s, "Default", "Sad") end,
     function (s) K.sTxt(s, "And then zoom back out...") end,
     function (s) K.tCha(s, "Default", "Zoom", 0.5, 30) end,
+    function (s) K.sTxt(s, "Let's slide the character along the X axis...") end,
+    function (s) K.sFlg(s, "Original Position", K.mCha(s, "Default", 1000, nil, 20)) end,
+    function (s) K.mCha(s, "Default", 100, nil, 20) end,
+    function (s) K.sTxt(s, "Along the Y...") end,
+    function (s) K.mCha(s, "Default", nil, 500, 10) end,
+    function (s) K.sTxt(s, "Now let's get it back to where it was") end,
+    function (s) 
+      local x = K.cFlg(scene, "Original Position")[1] 
+      local y = K.cFlg(scene, "Original Position")[2] 
+      K.mCha(s, "Default", x, y, 20, true) 
+    end,
     function (s) K.sTxt(s, "And then remove it!") end,
     function (s) K.rCha(s, "Default", "Fade Out", 30) end,
-
     function (s) K.sTxt(s, "Back to the start we go!") end,
     function (s) K.sPge(s, "Debug", 1) end
   },
