@@ -433,18 +433,6 @@ Kii.Element = {
 }
 
 Kii.Element.Actions = {
-  WarnPlayer = function (self, container, scene)
-    Kii.Element.Actions["Excite"](self, container, scene)
-
-    if scene._savedPosition == nil then
-      scene._savedPosition = {
-        scene.Script._current,
-        scene.Script._index,
-        scene.Containers[Kii.Scene.findIndex(scene, scene.Text._textBox)]._name
-      }
-      Kii.Scene.goTo(scene, "Panic", 1)
-    end
-  end,
   QuitGame = function (self, container, scene)
     love.event.quit()
   end,
@@ -556,7 +544,7 @@ Kii.Elements = {
         up = "Reset",
         click = "QuitGame",
         abandon = "Reset",
-        over = "WarnPlayer",
+        over = "Excite",
         leave = "Reset",
       }
     },
@@ -1157,7 +1145,7 @@ Kii.Scene = {
       index = index + 1
     end
   
-    Kii.Script.lookUp(scene.Script._current, scene.Script._index, scene)
+    K.ePg(scene, scene.Script._current, scene.Script._index)
   
     return scene
   
@@ -1226,17 +1214,6 @@ Kii.Scene = {
       end
 
     end
-  end,
-  -- Advances to the next line in the current Script
-  advance = function (scene)
-    scene.Script._index = scene.Script._index + 1
-    Kii.Script.lookUp(scene.Script._current, scene.Script._index, scene)
-  end,
-  -- Goes to a designated line in a designated Script
-  goTo = function (scene, script, index)
-    scene.Script._index = index
-    scene.Script._current = script
-    Kii.Script.lookUp(script, index, scene)
   end,
   -- Playes a character's voice
   playVoice = function (scene)
@@ -1390,7 +1367,7 @@ Kii.Scene = {
           if scene.Text._frame < string.len(scene.Text._text) then
             scene.Text._frame = string.len(scene.Text._text) - 1
           else
-            Kii.Scene.advance(scene)
+            K.sPg(scene)
           end
         end
         scene._mouseDown = nil
@@ -1531,289 +1508,104 @@ Kii.Sprites = {
 
 Kii.Script = {
   Characters = {
-    Kiinyo = {
-      _color = "White",
-      _voice = "Generic_Female",
-    },
-    Alistair = {
-      _color = "Red",
-      _voice = "Generic_Male"
-    },
-    System = {
+    Default = {
+      _name = "Default",
+      _voice = "Generic",
       _color = "Black",
-      _voice = "Generic"
+      Sprite = "Default"
     },
-    None = {
+    Kiinyo = {
+      _name = "Kiinyo",
+      _voice = "Generic_Female",
       _color = "White",
-      _voice = "Generic"
+      Sprite = nil
     }
-  },
-  -- Runs the indicated line
-  lookUp = function (script, index, scene)
-    Kii.Scripts[script][index](scene)
-    Kii.Scene.update(scene)
-  end
+  }
 }
 
--- Shortcuts to make script writing less painful!
 K = {
-  -- (n)ext frame
-  n = function (s)
-    Kii.Scene.advance(s)
+  -- a (add)
+  -- r (remove)
+  
+  -- g (get)
+  -- s (set)
+  -- c (check)
+
+  -- m (move)
+  -- t (transform)
+
+  -- e (execute)
+
+  -- Executes the indicated page
+  -- If no arguments are given, executes the scene's current page
+  ePg = function (scene, chapter, page)
+    chapter = chapter or scene.Script._current
+    page = page or scene.Script._index
+
+    Kii.Scripts[chapter][page](scene)
+    Kii.Scene.update(scene)
   end,
-  -- Shorthand to (c)hange (s)peaker
-  cs = function (s, Speaker, text, style)
-    local voice = Kii.Script.Characters[Speaker]._voice
-    local color = Kii.Script.Characters[Speaker]._color
-    if Speaker == "None" then
-      Speaker = ""
+  -- Sets the scene's current page and executes
+  -- If no arguments are given, goes to the next page
+  sPg = function (scene, chapter, page, dontExecute)
+    scene.Script._current = chapter or scene.Script._current
+    scene.Script._index = page or scene.Script._index + 1
+
+    if dontExecute == nil then
+      K.ePg(scene)
     end
+  end,
+
+  -- Sets the Scene's current text
+  -- Returns the Scene's previous text
+  sTx = function (scene, text, style)
+    local previousText = scene.Text._text
+    Kii.Scene.changeText(scene, text, style)
+    return previousText
+  end,
+
+  -- Sets the Scene's current speaker
+  -- Returns the Scene's previous speaker's {name, color, voice}
+  sSk = function (scene, speaker, text, style)
+    -- Prepping the previous speaker
+    local previousSpeaker = K.gTb(scene)
+    if previousSpeaker then 
+      previousSpeaker = {
+        scene.Containers[previousSpeaker]._name,
+        scene.Containers[previousSpeaker].Colors._speaker,
+        scene.Audio._voice
+      }
+    end
+    -- Changing the speaker
     Kii.Scene.changeSpeaker(
-      s,
-      Speaker,
-      voice,
-      color
+      scene,
+      Kii.Script.Characters[speaker]._name,
+      Kii.Script.Characters[speaker]._voice,
+      Kii.Script.Characters[speaker]._color      
     )
-    if text then K.nl(s, text, style) else
-      Kii.Scene.advance(s)
-    end
-  end,
-  -- Shorthand for (n)ew (l)ine
-  nl = function (s, text, style)
-    style = style or nil
-    Kii.Scene.changeText(s, text, style)
-  end,
-  sF = function (s, flag, contents)
-    contents = contents or true
-    s.Flags[flag] = contents
-    return contents
-  end,
-  cF = function (s, flag)
-    return s.Flags[flag]
-  end,
-  -- conditional dialogue
-  cD = function (s, flag, text1, text2)
-    if s.Flags[flag] then
-      K.nl(s, text1)
-    else
-      K.nl(s, text2)
-    end
-  end,
-  -- Shorthand to (g)o (t)o line
-  gt = function (s, script, line)
-    Kii.Scene.goTo(s, script, line)
-  end,
-  -- (d)isplay (C)olor (G)raphic
-  dCG = function (s, CG, animation)
-    
-  end,
-  -- (r)emove (C)olor (G)raphic
-  rCG = function (s, CG, animation)
-    
-  end,
-  -- (m)ove (character)
-  mc = function (s, character, x, speed, y)
-    y = y or Kii.Scene.getSprite(s, character).Position._y
-    speed = speed or 25
-    Kii.Container.move(
-      Kii.Scene.getSprite(s, character),
-      x,
-      y,
-      speed
-    )
-  end,
-  -- (a)nimate character
-  a = function (s, character, animation, scale)
-    Kii.Container.animate(
-      s.Containers[Kii.Scene.findIndex(s, s.Visual.Sprites[character])], 
-      animation,
-      scale)
-  end,
-  -- (z)oom (c)haracter
-  zc = function (s, character, zoom, speed)
-    Kii.Container.scale(
-      Kii.Scene.getSprite(s, character),
-      Kii.Scene.getSprite(s, character).Dimensions._width * zoom,
-      Kii.Scene.getSprite(s, character).Dimensions._height * zoom,
-      speed
-    )
-    Kii.Container.move(
-      Kii.Scene.getSprite(s, character),
-      math.floor(Kii.Scene.getSprite(s, character).Position._x - (Kii.Scene.getSprite(s, character).Dimensions._width * zoom - Kii.Scene.getSprite(s, character).Dimensions._width) / 2),
-      Kii.Scene.getSprite(s, character).Position._y,
-      speed
-    )
-
-  end,
-  -- (f)lip (c)haracter
-  fc = function (s, character, time)
-    time = time or 10
-    Kii.Container.flip(s.Containers[Kii.Scene.findIndex(s, s.Visual.Sprites[character])], time)
-  end,
-  -- (c)hange (e)motion
-  ce = function(s, character, emotion)
-    Kii.Sprite.changeExpression(Kii.Scene.getSprite(s, character), emotion)
-  end,
-  -- (i)ntroduce (c)haracter
-  ic = function (s, character, emotion, position, animation, variant)
-    variant = variant or "Default"
-    local sprite = Kii.Sprite.create(character, variant, emotion)
-    Kii.Scene.addSprite(s, sprite, position, animation)
-  end,
-  -- (r)emove (c)haracter
-  rc = function (s, character, animation, length)
-    Kii.Container.selfDestruct(
-      s.Containers[Kii.Scene.findIndex(s, s.Visual.Sprites[character])],
-      length,
-      animation
-    )
-  end,
-  --get Back Ground
-  gBG = function (s)
-    return s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)]
-  end,
-  -- Shorthand to (s)et (B)ack(G)round
-  sBG = function (s, BG, animation, time)
-    BG = Kii.Container.create(Kii.Containers.Backgrounds[BG])
-
-    if s.Visual._bg then
-      if animation then
-        if animation == "Fade In" then
-          time = time or 100
-          Kii.Container.selfDestruct(
-            s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)], 
-            time,
-            "Fade Out"
-          )
-        end
-      else
-        Kii.Scene.removeContainer(s, s.Visual._bg)
-      end
+    -- Writing the new line if one exists!
+    if text then
+      K.sTx(scene, text, style)
     end
 
-    Kii.Scene.addContainer(s, BG)
+    return previousSpeaker
+  end,
 
+  -- Gets the index of the current Text Box
+  -- returns index of Text Box in scene.Containers
+  gTb = function (scene)
+    return Kii.Scene.findIndex(scene, scene.Text._textBox)
   end,
-  -- remove Background
-  rBG = function (s, animation, time)
-
-    Kii.Scene.removeContainer(s, s.Visual._bg)
-    s.Visual._bg = nil
-
-  end,
-  -- play SFX
-  pSFX = function (SFX)
-    Kii.Audio.playSFX(SFX)
-  end,
-  -- get Text Box
-  gTB = function (s)
-    return s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)]
-  end,
-  -- (p)osition (T)ext(B)ox
-  pTB = function (s, x, y, time, type)
-    Kii.Container.move(s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)], x, y, time, type)
-  end,
-  -- (s)cale (T)ext(B)ox
-  sTB = function (s, width, height, time, type)
-    Kii.Container.scale(s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)], width, height, time, type)
-  end
 
 }
 
 Kii.Scripts = {
   Debug = {
-    function (s) K.cs(s,"System", "NOW ENTERING KIINYO'S VN TECH DEMO", "None") end,
-    function (s) K.cs(s, "Kiinyo", "Hello, is this thing on?", "Spoken") end,
-    function (s) K.nl(s, "Awesome, looks like I finally got it working!!", "Spoken") end,
-    function (s) K.nl(s, "Before anything else, let's see about fixing this text box...", "Spoken") end,
-    function (s) K.pTB(s, 40, 520, 25) K.sTB(s, 1200, 150, 25) K.n(s) end,
-    function (s) K.cs(s, "Kiinyo", "Clackety Clack", "Action") end,
-    function (s) K.cs(s, "Kiinyo", "Much better! ", "Spoken") end,
-    function (s) K.nl(s, "I have no idea who set it up like that.", "Spoken") end,    
-    function (s) K.cs(s, "System", "(She did...)", "None") end,
-    function (s) K.cs(s, "Kiinyo", "Now that that's out of the way, let's see about turning on some lights in here!", "Spoken") end,
-    function (s) K.sBG(s, "SimpleRed") K.n(s) end,
-    function (s) K.cs(s, "Kiinyo", "Click", "Action") end,
-    function (s) K.cs(s, "Kiinyo", "Oof!", "Spoken") end,
-    function (s) K.nl(s, "I can see, but I don't like this color!", "Spoken") end,    
-    function (s) K.nl(s, "Let's see if I can't do something about that too...", "Spoken") end,
-    function (s) K.sBG(s, "SimpleYellow", "Fade In", 25) K.n(s) end,
-    function (s) K.cs(s, "System", "Woosh", "Action") end,
-    function (s) K.cs(s, "Kiinyo", "Ah, that's more like it!", "Spoken") end,
-    function (s) K.nl(s, "Now this wouldn't be a Visual Novel without some characters!", "Spoken") end,
-    function (s) K.nl(s, "Let's see about drawing one up really fast...", "Spoken") end,
-    function (s) K.ic(s, "Default", "Sad", 500, "Fade In") end,
-    function (s) K.nl(s, "There we go!", "Spoken") end,
-    function (s) K.nl(s, "But why are they sad?", "Spoken") end,
-    function (s) K.nl(s, "One second, I can fix this...", "Spoken") end,
-    function (s) K.a(s, "Default", "Jitter", 100) K.n(s) end,
-    function (s) K.nl(s, "Click", "Action") end,
-    function (s) K.nl(s, "...", "Spoken") end,
-    function (s) K.nl(s, ".......", "Spoken") end,
-    function (s) K.a(s, "Default", "None") K.n(s) end,
-    function (s) K.nl(s, "Click", "Action") end,
-    function (s) K.nl(s, "Wrong switch.", "Spoken") end,
-    function (s) K.nl(s, "I know it's one of these...", "Spoken") end,
-    function (s) K.zc(s, "Default", 2, 10) K.n(s) end,
-    function (s) K.nl(s, "Click", "Action") end,
-    function (s) K.nl(s, "No...", "Spoken") end,
-    function (s) K.fc(s, "Default", 1) K.n(s) end,
-    function (s) K.nl(s, "Click", "Action") end,
-    function (s) K.nl(s, "No...", "Spoken") end,
-    function (s) K.mc(s, "Default",1450, 5) K.n(s) end,
-    function (s) K.nl(s, "Click", "Action") end,
-    function (s) K.nl(s, "No...", "Spoken") end,
-    function (s) if K.cF(s, "SD") then  else Kii.Container.addElement(s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)], Kii.Element.create(Kii.Elements.Debug.ExitButton)) end K.n(s) end,
-    function (s) K.nl(s, "Click", "Action") end,
-    function (s) 
-      if s.Flags["SD"] then
-        K.nl(s, "...", "Spoken") 
-      else
-        K.nl(s, "Ah!", "Spoken") 
-      end
-    end,
-    function (s) 
-      if s.Flags["SD"] then
-        K.nl(s, "Why didn't that button do anything...?", "Spoken") 
-      else
-        K.nl(s, "Please don't touch that...", "Spoken") 
-        s.Flags["SD"] = true
-      end
-    end,
-    function (s) K.ce(s, "Default", "Happy") K.n(s) end,
-    function (s) K.nl(s, "Click", "Action") end,
-    function (s) K.cs(s, "Kiinyo", "There, that's the one!", "Spoken") end,
-    function (s) K.nl(s, "Now let's slowly fix this mess...", "Spoken") end,
-    function (s) K.zc(s, "Default", 0.5, 10) end,
-    function (s) K.fc(s, "Default", 100) end,
-    function (s) K.cs(s, "Kiinyo", "Phew", "Spoken") end,
-    function (s) K.nl(s, "That's enouch excitement for me.", "Spoken") end,
-    function (s) K.nl(s, "I had a bunch of features to show you but after that performance I think I'd rather not risk it...", "Spoken") end,    
-    function (s) K.nl(s, "Thanks for checking out this demo!", "Spoken") end,
-    function (s) K.nl(s, "...", "Spoken") end,
-    function (s) K.nl(s, "Oh!", "Spoken") end,    
-    function (s) K.nl(s, "It loops though so I'll have to reset everything!", "Spoken") end,
-    function (s) K.nl(s, "One sec-", "Spoken") end,
-    function (s) K.sTB(s, 500,500,100) K.pTB(s, 100, 100, 100) K.rBG(s) K.rc(s, "Default", "Stage Left", 100) K.n(s) end,
-    function (s) K.cs(s, "System", "Beep Boop", "Action") end,
-    function (s) K.cs(s, "Kiinyo", "Much better!", "Spoken") end,
-    function (s) K.nl(s, "See you next time!", "Spoken") end,        
-    function (s) K.gt(s,"Debug", 1) end
+    function (s) K.sSk(s, "Kiinyo", "Hello, is this thing on?") end,
+    function (s) K.sTx(s, "Oh awesome, it is!", "Action") end,
+    function (s) K.sTx(s, "Back to the start we go!") end,
+    function (s) K.sPg(s, "Debug", 1) end
   },
-  Panic = {
-    function (s) K.cs(s, "Kiinyo", "!!!", "Spoken") end,
-    function (s) K.nl(s, "Even hovering over it is dangerous, please stay away from it!", "Spoken") end,
-    function (s) K.nl(s, "Mmmm, now what page of the script was I on...", "Spoken") end,
-    function (s) K.nl(s, "Oh that's right!", "Spoken") end,
-    function (s) 
-      local s1 = s._savedPosition[1]
-      local s2 = s._savedPosition[2]
-      local s3 = s._savedPosition[3]
-      s._savedPosition = nil
-      s.Containers[Kii.Scene.findIndex(s, s.Text._textBox)]._name = s3
-      K.gt(s, s1, s2)
-    end
-  }
 }
 
 return Kii
