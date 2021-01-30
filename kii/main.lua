@@ -1577,17 +1577,25 @@ K = {
     return previousText
   end,
 
+  -- Gets the Scene's current Speaker
+  -- Returns the Scene's Speaker's {name, color, voice}
+  gSpk = function (scene)
+    local index = K.gTbx(scene)
+
+    return {
+      scene.Containers[index]._name,
+      scene.Containers[index].Colors._speaker,
+      scene.Audio._voice
+    }
+
+  end,
   -- Sets the Scene's current speaker
   -- Returns the Scene's previous speaker's {name, color, voice}
   sSpk = function (scene, speaker, text, style)
     -- Prepping the previous speaker
     local previousSpeaker = K.gTbx(scene)
-    if previousSpeaker then 
-      previousSpeaker = {
-        scene.Containers[previousSpeaker]._name,
-        scene.Containers[previousSpeaker].Colors._speaker,
-        scene.Audio._voice
-      }
+    if previousSpeaker then
+      previousSpeaker = K.gSpk(scene)
     end
     -- Changing the speaker
     Kii.Scene.changeSpeaker(
@@ -1688,6 +1696,7 @@ K = {
     return Kii.Scene.addSprite(scene, sprite, position, animation)
   end,
 
+  -- Removes a Character from the scene
   rCha = function (scene, character, animation, length)
     character = Kii.Script.Characters[character].Sprite
     Kii.Container.selfDestruct(
