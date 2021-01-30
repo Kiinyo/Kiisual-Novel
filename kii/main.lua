@@ -1749,7 +1749,8 @@ K = {
       animation
     )
   end,
-  -- Set a Character's Animation and Shaders
+  -- Set a Character's Animation and Shaders and Emotions
+  -- If type is omitted, animation becomes emotion
   sCha = function (scene, character, animation, scale, type)
     character = Kii.Script.Characters[character].Sprite
 
@@ -1759,12 +1760,14 @@ K = {
         animation,
         scale
       )
-    else
+    elseif type == "Animation" then
       Kii.Container.animate(
         Kii.Scene.getSprite(scene, character),
         animation,
         scale
       )
+    else
+      Kii.Sprite.changeExpression(Kii.Scene.getSprite(scene, character), animation)
     end
   end,
   -- Transforms a Character in the scene
@@ -1834,9 +1837,13 @@ Kii.Scripts = {
     function (s) K.sTxt(s, "And zoom in on them...") end,
     function (s) K.tCha(s, "Default", "Zoom", 2, 30) end,
     function (s) K.sTxt(s, "Jitter them around!") end,
-    function (s) K.sCha(s, "Default", "Jitter", 10) end,
+    function (s) K.sCha(s, "Default", "Jitter", 10, "Animation") end,
     function (s) K.sTxt(s, "Enough of that.") end,
-    function (s) K.sCha(s, "Default") end,
+    function (s) K.sCha(s, "Default", "None", 1, "Animation") end,
+    function (s) K.sTxt(s, "Let's change the emotion to happy!") end,
+    function (s) K.sCha(s, "Default", "Happy") end,
+    function (s) K.sTxt(s, "And sad! ;~;") end,
+    function (s) K.sCha(s, "Default", "Sad") end,
     function (s) K.sTxt(s, "And then zoom back out...") end,
     function (s) K.tCha(s, "Default", "Zoom", 0.5, 30) end,
     function (s) K.sTxt(s, "And then remove it!") end,
