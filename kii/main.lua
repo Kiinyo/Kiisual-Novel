@@ -1597,12 +1597,35 @@ K = {
     return Kii.Scene.findIndex(scene, scene.Text._textBox)
   end,
 
+  -- Sets a Flag for the Scene
+  -- If no contents given, clears flag
+  -- Returns any previous contents of the flag
+  sFl = function (scene, flag, contents)
+    local previousContents = scene.Flags[flag]
+    scene.Flags[flag] = contents
+    return previousContents
+  end,
+
+  -- Checks if a Flag exists
+  -- Returns the contents of the flag
+  cFl = function (scene, flag)
+    return scene.Flags[flag]
+  end,
+
 }
 
 Kii.Scripts = {
   Debug = {
     function (s) K.sSk(s, "Kiinyo", "Hello, is this thing on?") end,
-    function (s) K.sTx(s, "Oh awesome, it is!", "Action") end,
+    function (s) 
+      if K.cFl(s, "Loop") then
+        K.sFl(s, "Loop", K.cFl(s, "Loop") + 1)
+      else
+        K.sFl(s, "Loop", 1)
+      end
+      K.sPg(s)
+    end,
+    function (s) K.sTx(s, "Looks like we're on Loop: " .. tostring(K.cFl(s, "Loop"))) end,
     function (s) K.sTx(s, "Back to the start we go!") end,
     function (s) K.sPg(s, "Debug", 1) end
   },
