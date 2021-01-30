@@ -817,6 +817,17 @@ Kii.Container = {
     end
   end,
 
+  setShader = function (container, shader, scale)
+    scale = scale or 1
+    local index = 1
+    while index <= #container.Elements do
+      container.Elements[index].Shader._type = shader
+      container.Elements[index].Shader._frame = 0
+      container.Elements[index].Shader._modifier = scale
+      index = index + 1
+    end
+  end,
+
   animate = function (container, animation, scale)
     scale = scale or 1
     local index = 1
@@ -1254,8 +1265,12 @@ Kii.Scene = {
       scene.Text._textBox = container._id
       position = position or #scene.Containers + 1
     elseif container._type == "Background" then
+      if scene.Visual._bg ~= nil then
+        position = position or 2
+      else
+        position = position or 1
+      end
       scene.Visual._bg = container._id
-      position = position or 1
     else
       if scene.Text._textBox then
         position = position or #scene.Containers
@@ -1602,6 +1617,69 @@ K = {
     Kii.Audio.SFX[soundEffect]:play()
   end,
 
+  -- Checks if the Scene currently has a background
+  cBga = function (scene)
+    return scene.Visual._bg
+  end,
+  -- Sets the current Background
+  sBga = function (scene, Background, animation, time)
+    time = time or 0
+    Background = Kii.Container.create(Kii.Visuals.Background[Background])
+
+    Kii.Container.setDimensions(Background, love.graphics.getWidth(), love.graphics.getHeight())
+    
+    if K.cBga(scene) then
+      Kii.Container.selfDestruct(
+        scene.Containers[Kii.Scene.findIndex(scene, scene.Visual._bg)],
+        time
+      )
+    end
+
+    if animation == "Zoom In" then
+      Kii.Container.scale(
+        Background,
+        love.graphics.getWidth(),
+        love.graphics.getHeight(),
+        time
+      )
+      Kii.Container.move(
+        Background,
+        0,
+        0,
+        time
+      )
+      Kii.Container.setDimensions(
+        Background,
+        1,
+        1
+      )
+      Kii.Container.setPosition(
+        Background,
+        love.graphics.getWidth() / 2,
+        love.graphics.getHeight() / 2
+      )
+
+    elseif animation == "Stage Right" then
+      Kii.Container.setPosition(
+        Background,
+        0 - Background.Dimensions._width,
+        0
+      )
+      Kii.Container.move(Background, 0, 0, time)
+    elseif animation == "Stage Left" then
+      Kii.Container.setPosition(
+        Background,
+        Background.Dimensions._width + 1,
+        0
+      )
+      Kii.Container.move(Background, 0, 0, time)
+
+    elseif animation == "Fade In" then
+      Kii.Container.setShader(Background, animation, time)
+    end
+
+    Kii.Scene.addContainer(scene, Background)
+  end,
   -- Sets a Flag for the Scene
   -- If no contents given, clears flag
   -- Returns any previous contents of the flag
@@ -1630,6 +1708,18 @@ Kii.Scripts = {
       K.sPge(s)
     end,
     function (s) K.sTxt(s, "Looks like we're on Loop: " .. tostring(K.cFlg(s, "Loop"))) end,
+    function (s) K.sTxt(s, "Now let's set a background") end,
+    function (s) 
+      if K.cFlg(s, "Loop") % 3 == 0 then
+        K.sBga(s, "Simple", "Zoom In", 100)
+      elseif K.cFlg(s, "Loop") % 3 == 1 then
+        K.sBga(s, "Simple", "Stage Left", 100)
+        s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)].Elements[1].Dimensions._color = "Yellow"
+      else
+        K.sBga(s, "Simple", "Fade In", 100)
+        s.Containers[Kii.Scene.findIndex(s, s.Visual._bg)].Elements[1].Dimensions._color = "Blue"
+      end
+    end,
     function (s) K.sTxt(s, "Back to the start we go!") end,
     function (s) K.sPge(s, "Debug", 1) end
   },
