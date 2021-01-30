@@ -1740,7 +1740,6 @@ K = {
 
     return Kii.Scene.addSprite(scene, sprite, animation, speed)
   end,
-
   -- Removes a Character from the scene
   rCha = function (scene, character, animation, length)
     character = Kii.Script.Characters[character].Sprite
@@ -1750,7 +1749,25 @@ K = {
       animation
     )
   end,
+  -- Set a Character's Animation and Shaders
+  sCha = function (scene, character, animation, scale, type)
+    character = Kii.Script.Characters[character].Sprite
 
+    if type == "Shader" then
+      Kii.Container.setShader(
+        Kii.Scene.getSprite(scene, character),
+        animation,
+        scale
+      )
+    else
+      Kii.Container.animate(
+        Kii.Scene.getSprite(scene, character),
+        animation,
+        scale
+      )
+    end
+  end,
+  -- Transforms a Character in the scene
   tCha = function (scene, character, type, magnitude, speed)
     character = Kii.Script.Characters[character].Sprite
     local width = Kii.Scene.getSprite(scene, character).Resize._targetWidth
@@ -1770,6 +1787,7 @@ K = {
       )
     end
   end,
+
 
   -- Sets a Flag for the Scene
   -- If no contents given, clears flag
@@ -1812,12 +1830,17 @@ Kii.Scripts = {
       end
     end,
     function (s) K.sTxt(s, "Now let's add a character") end,
-    function (s) K.aCha(s, "Default", "Default", 800, "Stage Left", 100) end,
+    function (s) K.aCha(s, "Default", "Default", 800, "Stage Left", 30) end,
     function (s) K.sTxt(s, "And zoom in on them...") end,
-    function (s) K.tCha(s, "Default", "Zoom", 2, 100) end,
-    function (s) K.tCha(s, "Default", "Zoom", 0.5, 100) end,
+    function (s) K.tCha(s, "Default", "Zoom", 2, 30) end,
+    function (s) K.sTxt(s, "Jitter them around!") end,
+    function (s) K.sCha(s, "Default", "Jitter", 10) end,
+    function (s) K.sTxt(s, "Enough of that.") end,
+    function (s) K.sCha(s, "Default") end,
+    function (s) K.sTxt(s, "And then zoom back out...") end,
+    function (s) K.tCha(s, "Default", "Zoom", 0.5, 30) end,
     function (s) K.sTxt(s, "And then remove it!") end,
-    function (s) K.rCha(s, "Default", "Fade Out", 100) end,
+    function (s) K.rCha(s, "Default", "Fade Out", 30) end,
 
     function (s) K.sTxt(s, "Back to the start we go!") end,
     function (s) K.sPge(s, "Debug", 1) end
