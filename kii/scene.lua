@@ -21,7 +21,7 @@ Kii.Scene = {
           Log = template.History.Log or {}
         },
         Script = {
-          _current = template.Script._current or "Debug",
+          _current = template.Script._current or "Demo",
           _index = template.Script._index or 1
         },
         Text = {

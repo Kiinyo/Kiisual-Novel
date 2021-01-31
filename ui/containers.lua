@@ -3,9 +3,9 @@ local Containers = {
     -- delete or rename it if you'd rather not
     -- dig around in the kii files!
     TextBox = {
-      _name = "Debug Container",
+      _name = "Demo Container",
       _type = "Text Box",
-      _text = "Just some debug stuffs",
+      _text = "Just some Demo stuffs",
       Position = {_x = 40, _y = 500},
       Dimensions = {
         _height = 150,
@@ -17,10 +17,10 @@ local Containers = {
         _detail = "Black"
       },
       Elements = {
-        "Debug_Shadow",
-        "Debug_Body",
-        "Debug_Header",
-        "Debug_ExitButton"
+        "Demo_Shadow",
+        "Demo_Body",
+        "Demo_Header",
+        "Demo_ExitButton"
       }
     },
     -- Same with this, this the container that

@@ -300,8 +300,8 @@ local template2 = {
 }
 
 local Elements = {
-  Debug_Shadow = {
-    _name = "Debug Shadow",
+  Demo_Shadow = {
+    _name = "Demo Shadow",
     _type = "Shadow",
     Dimensions = {
       _shape = "Box",
@@ -319,8 +319,8 @@ local Elements = {
       _text = "@None"
     }
   },
-  Debug_Body = {
-    _name = "Debug Body",
+  Demo_Body = {
+    _name = "Demo Body",
     _type = "Body",
     Dimensions = {
       _shape = "Box",
@@ -332,8 +332,8 @@ local Elements = {
       _color = "Detail"
     }
   },
-  Debug_Header = {
-    _name = "Debug Header",
+  Demo_Header = {
+    _name = "Demo Header",
     _type = "Header",
     Dimensions = {
       _relative = "Width",
@@ -353,8 +353,8 @@ local Elements = {
       _alignX = "left"
     }
   },
-  Debug_ExitButton = {
-    _name = "Debug ExitButton",
+  Demo_ExitButton = {
+    _name = "Demo ExitButton",
     _type = "Button",
     _interactive = true,
     Dimensions = {
@@ -381,8 +381,8 @@ local Elements = {
       leave = "Reset",
     }
   },
-  Debug_CloseContainerButton = {
-    _name = "Debug CloseContainerButton",
+  Demo_CloseContainerButton = {
+    _name = "Demo CloseContainerButton",
     _type = "Button",
     _interactive = true,
     Dimensions = {

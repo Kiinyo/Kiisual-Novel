@@ -27,14 +27,14 @@ Kii.Element.Actions = {
     self.Animation._type = "Slide Down"
     self.Animation._modifier = 10
     if scene.Script._index < 60 then
-      K.sPge(scene, "Debug", 61)
+      K.sPge(scene, "Demo", 61)
     end
   end,
   FancyJoke = function (self, container, scene)
     self.Shader._type = "None"
     self.Shader._modifier = 1
     self.Shader._frame = 0
-    K.sPge(scene, "Debug", 64)
+    K.sPge(scene, "Demo", 64)
   end,
   Glow = function (self, container, scene)
     self.Shader._type = "Lighten"
@@ -57,7 +57,7 @@ Kii.Element.Actions = {
   end,
   FancyDeleteContainer = function (self, container, scene)
     Kii.Element.Actions.DeleteContainer(self, container, scene)
-    K.sPge(scene, "Debug", 66)
+    K.sPge(scene, "Demo", 66)
   end,
   QuitGame = function (self, container, scene)
     love.event.quit()

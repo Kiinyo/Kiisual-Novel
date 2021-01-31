@@ -1,4 +1,4 @@
-local Debug = { function (s) K.sSpk(s, "Narrator", "Hey there and welcome to my VN frameworks's tech demo!") end,
+local Demo = { function (s) K.sSpk(s, "Narrator", "Hey there and welcome to my VN frameworks's tech demo!") end,
     function (s) K.eBgm(s, "Generic_Jazz.mp3", true) end,
     function (s) if K.gFlg(s, "Loop") then K.sFlg(s, "Loop", K.gFlg(s, "Loop") + 1) else K.sFlg(s, "Loop", 1) end K.sPge(s) end,
     function (s) K.sTxt(s, "Looks like we're on loop " .. tostring(K.gFlg(s, "Loop"))) end,
@@ -50,25 +50,25 @@ local Debug = { function (s) K.sSpk(s, "Narrator", "Hey there and welcome to my 
     function (s) s.Containers[K.gTbx(s)].Elements[4].Shader._type = "Fade Out" s.Containers[K.gTbx(s)].Elements[4].Shader._frame = 0 s.Containers[K.gTbx(s)].Elements[4].Shader._modifier = 10 end,
     function (s) K.sTxt(s, "Unfortunately this is super specific and I'm not sure how to make a sensible API for it so you'll have to do it by hand for now.") end,
     function (s) K.sTxt(s, "Let's just add that back...") end,
-    function (s) local element = Kii.Element.create(Kii.Elements["Debug_ExitButton"]) element.Shader._type = "Fade In" element.Shader._frame = 0 element.Shader._modifier = 25 Kii.Container.addElement(s.Containers[K.gTbx(s)], element) end,
+    function (s) local element = Kii.Element.create(Kii.Elements["Demo_ExitButton"]) element.Shader._type = "Fade In" element.Shader._frame = 0 element.Shader._modifier = 25 Kii.Container.addElement(s.Containers[K.gTbx(s)], element) end,
     function (s) K.sTxt(s, "And fix the text box") end,
     function (s) K.mTbx(s, 40, 500, 20) K.tTbx(s, 1200, 150, 20) end,
     function (s) K.sTxt(s, "Now we can see about adding another another UI element!") end,
     function (s) K.aCon(s, "Fancy") end,
     function (s) K.sTxt(s, "There we go!") end,
     function (s) K.sTxt(s, "Feel free to play around with it and click the red tab when you're ready to move on!") end,
-    function (s) K.sPge(s, "Debug", 59) end,
+    function (s) K.sPge(s, "Demo", 59) end,
     function (s) K.sTxt(s, "!!!") end,
     function (s) K.sTxt(s, "Be careful, it'll delete system32!") end,
-    function (s) K.sPge(s, "Debug", 59) end,
+    function (s) K.sPge(s, "Demo", 59) end,
     function (s) K.sTxt(s, "Just kidding, it's useless!") end,
-    function (s) K.sPge(s, "Debug", 59) end,
+    function (s) K.sPge(s, "Demo", 59) end,
     function (s) K.sTxt(s, "Awesome!") end,
     function (s) K.sTxt(s, "So as you can see, there's a whole bunch of stuff you can wire through UI elements!") end,
     function (s) K.sTxt(s, "And with that I think that concludes this demo, I hope you've enjoyed yourself!") end,
     function (s) K.sTxt(s, "Oh, before I forget, you can right click to see the chat history.") end,
     function (s) K.sTxt(s, "There's a bit of an easter egg in the first couple of lines after the script resets to show off flags, but other than that thanks so much again for checking this out!") end,
     function (s) K.sTxt(s, "See you next time!") end,
-    function (s) K.sPge(s, "Debug", 1) end
+    function (s) K.sPge(s, "Demo", 1) end
 }
-return Debug
+return Demo
