@@ -565,7 +565,7 @@ local Elements = {
       _text = "@None"
     }
   },
-  Simple_History = {
+  History = {
     _name = "Simple History Box",
     _type = "Body",
     Dimensions = {

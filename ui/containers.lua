@@ -1,5 +1,8 @@
 local Containers = {
-    Debug = {
+    -- Feel free to customize this but do not
+    -- delete or rename it if you'd rather not
+    -- dig around in the kii files!
+    TextBox = {
       _name = "Debug Container",
       _type = "Text Box",
       _text = "Just some debug stuffs",
@@ -20,6 +23,31 @@ local Containers = {
         "Debug_ExitButton"
       }
     },
+    -- Same with this, this the container that
+    -- displays the game's history!
+    History = {
+        _name = "Simple History",
+        _type = "Body",
+        Dimensions = {
+          _height = 640,
+          _width = 640
+        },
+        Position = {
+          _x = 320,
+          _y = 40
+        },
+        Colors = {
+          _primary = "Black",
+          _detail = "White"
+        },
+        Elements = {
+          "History"
+        }
+    },
+
+    -- Here you can add any containers you want
+    -- to display in your game for whatever reason!
+
     Fancy = {
       _name = "Fancy Box",
       _type = "Fancy Box",
@@ -41,25 +69,6 @@ local Containers = {
         "Fancy_Body",
         "Fancy_Header"
       }
-    },
-    Simple_History = {
-        _name = "Simple History",
-        _type = "Body",
-        Dimensions = {
-          _height = 640,
-          _width = 640
-        },
-        Position = {
-          _x = 320,
-          _y = 40
-        },
-        Colors = {
-          _primary = "Black",
-          _detail = "White"
-        },
-        Elements = {
-          "Simple_History"
-        }
     }
 }
 
