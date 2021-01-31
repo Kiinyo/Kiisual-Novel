@@ -1,4 +1,3 @@
-
 Kii.Sprite = {
   create = function (name, base, expression, position)
     local x = position or 800

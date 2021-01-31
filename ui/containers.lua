@@ -42,8 +42,7 @@ local Containers = {
         "Fancy_Header"
       }
     },
-    Simple = {
-      History = {
+    Simple_History = {
         _name = "Simple History",
         _type = "Body",
         Dimensions = {
@@ -61,7 +60,6 @@ local Containers = {
         Elements = {
           "Simple_History"
         }
-      }
     }
 }
 

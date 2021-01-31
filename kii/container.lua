@@ -52,6 +52,9 @@ Kii.Container = {
           element = Kii.Element.create(template.Elements[index])
         else
           element = Kii.Element.create(Kii.Elements[template.Elements[index]])
+          if element._type == "Image" then
+            element._shape =  love.graphics.newImage("media/visual/images"..element._shape)
+          end
         end
         Kii.Container.addElement(container, element)
         index = index + 1

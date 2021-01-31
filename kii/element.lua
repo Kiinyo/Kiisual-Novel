@@ -16,7 +16,7 @@ Kii.Element = {
           _relative = template.Dimensions._relative or "Both",
           _height = template.Dimensions._height or 1,
           _width = template.Dimensions._width or 1,
-          _shape = template.Dimensions._shape or "Obround",
+          _shape = template.Dimensions._shape or "Box",
           _color = template.Dimensions._color or "Blue",
           _padding = template.Dimensions._padding or 10,
           _alpha = template.Dimensions._alpha or 1,
@@ -30,7 +30,7 @@ Kii.Element = {
           _alignY = template.Position._alignY or "Up"
         },
         Text = {
-          _text = template.Text._text or "This is a default string",
+          _text = template.Text._text or "@None",
           _font = template.Text._font or "Anime_Ace",
           _color = template.Text._color or "White",
           _alignX = template.Text._alignX or "center",
