@@ -116,7 +116,7 @@ Kii.Render = {
     return wrappedText
   end,
   -- Renders a polygon
-  polygon = function (x, y, width, height, shape)
+  polygon = function (x, y, width, height, shape, jitter)
     local vertices = {}
     if shape == "Right Iso Tri" then -- looks like ▶
       vertices = {x, y,
@@ -128,21 +128,30 @@ Kii.Render = {
                   math.floor(x + width * (7/8)), y,
                   x + width, y + height,
                   x, y + height}
+    elseif shape == "Fancy Box" then
+      vertices =       {x, y,
+                        x + width, y,
+                        x + width, y + height,
+                        x, y + height}
+                        jitter = true
     elseif shape == "Fancy Body" then
       vertices = {x, y + height * 5/16,
                   x + width, y,
                   x + width * (7/8), y + height * (7/8),
                   x + width / 16, y + height * (13/16)}
+                  jitter = true
     elseif shape == "Fancy Header" then
       vertices = {x, y,
                   x + width, y + height / 8,
                   x + width, y + height,
                   x, y + height}
+                  jitter = true
 
     elseif shape == "Fancy Decoration" then
       vertices = {x, y,
                   x + width, y,
                   x, y + height}
+                  jitter = true
     elseif shape == "Shadow" then
       vertices = {x + width, y + 10,
                   x + width + 10, y + 10,
@@ -220,7 +229,18 @@ Kii.Render = {
                         x + width, y + height,
                         x, y + height}
     end
-    if shape ~= "None" then love.graphics.polygon('fill', vertices) end
+    if shape ~= "None" then 
+      if jitter then
+        local index = 1
+        while index <= #vertices do
+          if math.random(1, 3) == 3 then
+            vertices[index] = vertices[index] + math.random(-3, 3)
+          end
+          index = index + 1
+        end
+      end
+      love.graphics.polygon('fill', vertices) 
+    end
   end,
   -- Preps the draw function's colors
   applyShaders = function (element)
@@ -372,6 +392,7 @@ Kii.Render = {
     elseif element._type == "SpriteExpression" then
       Kii.Render.drawImage(Kii.Sprites[element._name].Expressions[element.Dimensions._shape], x, y, width, height, true)
     else
+      local jitter = false
       Kii.Render.polygon(x, y, width, height, element.Dimensions._shape)
     end
     -- Now render any applicable text on top!
@@ -763,7 +784,7 @@ Kii.Elements = {
       Dimensions = {
         _height = 1/2,
         _width = 1/8,
-        _shape = "Rounded Box",
+        _shape = "Fancy Box",
         _color = "Red"
       },
       Position = {
@@ -790,7 +811,7 @@ Kii.Elements = {
       Dimensions = {
         _width = 7/32,
         _height = 1/4,
-        _shape = "Rounded Box",
+        _shape = "Fancy Box",
         _color = "Blue"
       },
       Position = {
@@ -811,13 +832,13 @@ Kii.Elements = {
       }
     },
     Button2 = {
-      _name = "Fancy Button 1",
+      _name = "Fancy Button 2",
       _type = "Button",
       _interactive = true,
       Dimensions = {
         _width = 7/32,
         _height = 1/4,
-        _shape = "Rounded Box",
+        _shape = "Fancy Box",
         _color = "Blue"
       },
       Position = {
