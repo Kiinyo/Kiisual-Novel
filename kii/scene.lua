@@ -99,7 +99,7 @@ Kii.Scene = {
     end,
     -- Playes a character's voice
     playVoice = function (scene)
-      if scene.Audio._voice ~= nil then K.eSfx(scene.Audio._voice) end
+      if scene.Audio._voice ~= nil then scene.Audio._voice:play() end
     end,
     -- Given an x and y coordinate, returns the element if interactive
     findElement = function (scene, x, y)
@@ -318,7 +318,11 @@ Kii.Scene = {
         local index = Kii.Scene.findIndex(scene, scene.Text._textBox)
         scene.Containers[index]._name = text
         scene.Containers[index].Colors._speaker = color
-        scene.Audio._voice = voice
+        if voice then 
+          scene.Audio._voice = love.audio.newSource("media/audio/sfx/"..voice, "static")
+        else 
+          scene.Audio._voice = nil
+        end
       end
     end
   }

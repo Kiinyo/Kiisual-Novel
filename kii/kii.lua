@@ -5,7 +5,6 @@ Kii = {
 require "kii/math"
 require "kii/util"
 require "kii/render"
-require "kii/audio"
 require "kii/element"
 
 Kii.Element.Actions = {
@@ -568,15 +567,19 @@ K = {
   end,
 
   -- Executes a specified sound effect
-  eSfx = function (soundEffect)
-    Kii.Audio.SFX[soundEffect]:play()
+  eSfx = function (scene, soundEffect, looping)
+    local looping = looping or false
+    soundEffect = love.audio.newSource("media/audio/sfx/"..soundEffect, "stream")
+    soundEffect:setLooping(looping)
+    soundEffect:play()
   end,
 
-  -- Executes a specified sound effect
-  eBgm = function (track, looping)
-    looping = looping or false
-    Kii.Audio.BGM[track]:setLooping(looping)
-    Kii.Audio.BGM[track]:play()
+  -- Executes a specified bgm
+  eBgm = function (scene, track, looping)
+    local looping = looping or false
+    soundEffect = love.audio.newSource("media/audio/bgm/"..track, "stream")
+    soundEffect:setLooping(looping)
+    soundEffect:play()
   end,
 
   -- Checks if the Scene currently has a background
