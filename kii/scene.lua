@@ -3,7 +3,7 @@ Kii.Scene = {
     -- Creates a new scene and sets a bunch of defaults, returns a Scene
     create = function (template)
       template = template or {}
-      template.Containers = template.Containers or {Kii.Containers.Debug}
+      template.Containers = template.Containers or {"Debug"}
       template.Script = template.Script or {}
       template.Text = template.Text or {}
       template.Audio = template.Audio or {}
@@ -46,7 +46,7 @@ Kii.Scene = {
       local container = nil
     
       while index <= #template.Containers do
-        container = Kii.Container.create(template.Containers[index])
+        container = Kii.Container.create(Kii.Containers[template.Containers[index]])
         Kii.Scene.addContainer(scene, container)
         index = index + 1
       end
@@ -194,7 +194,7 @@ Kii.Scene = {
     -- Toggles whether or not the history is displayed
     toggleHistory = function (scene)
       if scene._pause == nil then
-        local hisCon = Kii.Container.create(Kii.Containers.Simple.History)
+        local hisCon = Kii.Container.create(Kii.Containers.Simple_History)
         scene._pause = "History"
         hisCon._text = Kii.Util.parseText(scene.History.Log)
   

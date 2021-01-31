@@ -50,7 +50,7 @@ local Debug = { function (s) K.sSpk(s, "Narrator", "Hey there and welcome to my 
     function (s) s.Containers[K.gTbx(s)].Elements[4].Shader._type = "Fade Out" s.Containers[K.gTbx(s)].Elements[4].Shader._frame = 0 s.Containers[K.gTbx(s)].Elements[4].Shader._modifier = 10 end,
     function (s) K.sTxt(s, "Unfortunately this is super specific and I'm not sure how to make a sensible API for it so you'll have to do it by hand for now.") end,
     function (s) K.sTxt(s, "Let's just add that back...") end,
-    function (s) local element = Kii.Element.create(Kii.Elements.Debug.ExitButton) element.Shader._type = "Fade In" element.Shader._frame = 0 element.Shader._modifier = 25 Kii.Container.addElement(s.Containers[K.gTbx(s)], element) end,
+    function (s) local element = Kii.Element.create(Kii.Elements["Debug_ExitButton"]) element.Shader._type = "Fade In" element.Shader._frame = 0 element.Shader._modifier = 25 Kii.Container.addElement(s.Containers[K.gTbx(s)], element) end,
     function (s) K.sTxt(s, "And fix the text box") end,
     function (s) K.mTbx(s, 40, 500, 20) K.tTbx(s, 1200, 150, 20) end,
     function (s) K.sTxt(s, "Now we can see about adding another another UI element!") end,

@@ -5,7 +5,7 @@ Kii.Container = {
       template.Dimensions = template.Dimensions or {}
       template.Position = template.Position or {}
       template.Colors = template.Colors or {}
-      template.Elements = template.Elements or {Kii.Elements.Default}
+      template.Elements = template.Elements or {}
       template.Resize = template.Resize or {}
       template.Reposition = template.Reposition or {}
     
@@ -48,7 +48,11 @@ Kii.Container = {
       local index = 1
       local element = nil
       while index <= #template.Elements do
-        element = Kii.Element.create(template.Elements[index])
+        if container._type == "Background" or container._type == "Sprite" then
+          element = Kii.Element.create(template.Elements[index])
+        else
+          element = Kii.Element.create(Kii.Elements[template.Elements[index]])
+        end
         Kii.Container.addElement(container, element)
         index = index + 1
       end
@@ -444,7 +448,6 @@ Kii.Container = {
   
     end,
     enterAnimation = function (container, animation, length)
-      print(animation)
       if animation == "Fade In" then
         Kii.Container.setShader(container, animation, length)
       elseif animation == "Zoom In" then
