@@ -12,17 +12,6 @@ Kii.Render = {
       }
     },
     Fonts = {},
-    loadVisuals = function ()
-        local dir = require "media/visual/directory"
-        local index = 1
-        print("Started Font loading..")
-        while index <= #dir.Fonts do
-            Kii.Render.Fonts[dir.Fonts[index]] = love.graphics.newFont("media/visual/fonts/"..dir.Fonts[index]..".ttf")
-            index = index + 1
-        end
-        print("Fonts loaded!")
-        local index = 1
-    end,
     -- Takes in a color name and sets the color to be drawn next
     setColor = function (color, alpha, palette)
       color = color or "Black"
@@ -44,8 +33,9 @@ Kii.Render = {
              Kii.Render.Palette[palette][color][3]
     end,
     -- Sets the font
-    setFont = function (font)
-      love.graphics.setFont(Kii.Render.Fonts[font])
+    setFont = function (font, size)
+      size = size or 18
+      love.graphics.setNewFont("media/visual/fonts/"..font..".ttf", size)
     end,
     -- Draws text on screen and returns any leftover text
     printText = function (text, x, y, width, height, alignx, aligny)
@@ -357,7 +347,7 @@ Kii.Render = {
       local r, g, b, a = love.graphics.getColor()
       if element.Text._text ~= "@None" then
         Kii.Render.setColor(element.Text._color, a)
-        Kii.Render.setFont(element.Text._font)
+        Kii.Render.setFont(element.Text._font, element.Text._size)
         -- Now we can render the text and be done!
         Kii.Render.printText(element.Text._text,
                              x + element.Dimensions._padding,
@@ -385,5 +375,3 @@ Kii.Render = {
       end
     end
 }
-
-Kii.Render.loadVisuals()

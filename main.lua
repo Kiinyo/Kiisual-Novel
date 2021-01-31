@@ -1,4 +1,4 @@
-Kii = require "kii/kii"
+require "kii/kii"
 
 function love.load()
   love.graphics.setBackgroundColor(Kii.Render.colorFind("Black"))
