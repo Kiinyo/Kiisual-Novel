@@ -1,5 +1,5 @@
 local Debug = { function (s) K.sSpk(s, "Narrator", "Hey there and welcome to my VN frameworks's tech demo!") end,
-    function (s) K.eBgm("Generic_Jazz.mp3", true) end,
+    function (s) K.eBgm(s, "Generic_Jazz.mp3", true) end,
     function (s) if K.cFlg(s, "Loop") then K.sFlg(s, "Loop", K.cFlg(s, "Loop") + 1) else K.sFlg(s, "Loop", 1) end K.sPge(s) end,
     function (s) K.sTxt(s, "Looks like we're on loop " .. tostring(K.cFlg(s, "Loop"))) end,
     function (s) if (K.cFlg(s, "Loop") == 1) then K.sTxt(s, "Oh, that means it's your first time! Hello!") else K.sTxt(s, "It's nice to see you again!") end end,

@@ -56,10 +56,7 @@ Kii.Element.Actions = {
     self.Animation._type = "Return Down"
   end,
   FancyDeleteContainer = function (self, container, scene)
-    scene._mouseOver = nil
-    scene._mouseDown = nil
-    scene._mouseUp = nil
-    Kii.Scene.removeContainer(scene, container._id)
+    Kii.Element.Actions.DeleteContainer(self, container, scene)
     K.sPge(scene, "Debug", 66)
   end,
   QuitGame = function (self, container, scene)
@@ -577,9 +574,9 @@ K = {
   -- Executes a specified bgm
   eBgm = function (scene, track, looping)
     local looping = looping or false
-    soundEffect = love.audio.newSource("media/audio/bgm/"..track, "stream")
-    soundEffect:setLooping(looping)
-    soundEffect:play()
+    track = love.audio.newSource("media/audio/bgm/"..track, "stream")
+    track:setLooping(looping)
+    track:play()
   end,
 
   -- Checks if the Scene currently has a background
