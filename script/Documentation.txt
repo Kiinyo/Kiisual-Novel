@@ -1,0 +1,47 @@
+Hey there and welcome to the documentation for my Visual Novel framework! The API is built on 7 basic single letter actions that then get applied to a bunch of different 3 letter contexts. It's designed in a such a way that you can hopefully make a reasonable guess as to what the command you're looking for is, even without having seen it before!
+First thing's first, let's introduce the 7 universal single letter actions that get applied to everything! They are:
+
+	a - Add
+		This is in charge of adding whatever the module is to the scene.
+	r - Remove
+		And is responsible for removing whatever the module is from the scene!
+	
+	g - Get
+		If the context exists in the scene, it returns the context. If it doesn't, it returns nil		
+	s - Set
+		Sets the context, it can be thought of as an add that ensures only one thing can exist at a time.
+
+	m - Move
+		Mainly used for containers, it allows you to move an object on the screen
+	t - Transform
+		Likewise, transform lets you transform a specific context
+	
+	e - Execute
+		Runs a context
+	
+The way these commands work is that they are attached to a certain context that creates the function, these modules include:
+
+	Pge - [P]a[ge]
+		Useful for navigating the script, "Page" refers to a specific line in a "Chapter".
+	Tbx - [T]ext [b]o[x]
+		The star of any Visual Novel! This is where all the dialogue is displayed in the scene.
+	Txt - [T]e[xt]
+		This refers to the currently diplayed "Text" in the "Scene"'s designated "Text box"
+	Spk - [Sp]ea[k]er
+		The "Speaker" meanwhile is the one responsible for the currently displayed "Text"
+	Spr - [Spr]ite
+		The actors in the drama that is Visual Novel. "Sprite"s are all the characters in the "Scene"
+	Flg - [Fl]a[g]
+		The under appreciated stage hands of the VN, these flags are to track literally anything.
+	Con - [Con]tainer
+		Any bundle of UI elements, the sprites, background, and text box are all containers!
+	Sfx - [S]ound [fx]
+		Any sound effects in the Visual Novel
+	Bgm - [B]ack[g]round [m]usic
+		This refers to whatever background music is playing!
+	Bga - [B]ack[g]round [a]rt
+		And this refers to the "Scene"'s current BG.
+		
+With this framework, it's relatively easy to mix and match different things, for instance if you want to set the current text on the screen you'd use "sTxt", moving the text box is as easy as "mTbx".
+
+Tha argument structure for these functions follows (scene, target, modifiers) for instance, the arguments for the sTxt function from earlier are sTxt(scene, text, style). Scene always gets passed first and is usually abbreviated as s, and is just a way to make sure that we don't have any nasty globals laying around!

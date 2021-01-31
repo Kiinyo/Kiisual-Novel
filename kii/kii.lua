@@ -9,15 +9,15 @@ require "kii/element"
 
 Kii.Element.Actions = {
   FancyPress = function (self, container, scene)
-    if K.cFlg(scene, "Presses") == nil then
+    if K.gFlg(scene, "Presses") == nil then
       K.sFlg(scene, "Presses", 1)
       container._text = "You've clicked my button 1 time!"
-    elseif K.cFlg(scene, "Presses") == 1 then
+    elseif K.gFlg(scene, "Presses") == 1 then
       K.sFlg(scene, "Presses", 2)
       container._text = "You've clicked my button twice now!"
-    elseif K.cFlg(scene, "Presses") > 1 and K.cFlg(scene, "Presses") < 10 then
-      K.sFlg(scene, "Presses", K.cFlg(scene, "Presses") + 1)
-      container._text = tostring(K.cFlg(scene, "Presses")).." times now."
+    elseif K.gFlg(scene, "Presses") > 1 and K.gFlg(scene, "Presses") < 10 then
+      K.sFlg(scene, "Presses", K.gFlg(scene, "Presses") + 1)
+      container._text = tostring(K.gFlg(scene, "Presses")).." times now."
     else
       container._text = "There's more of the demo left you know..."
     end
@@ -552,7 +552,7 @@ K = {
   gTbx = function (scene)
     return Kii.Scene.findIndex(scene, scene.Text._textBox)
   end,
-
+ -- Moves
   mTbx = function (scene, x, y, duration)
     duration = duration or 20
     Kii.Container.move(scene.Containers[K.gTbx(scene)], x, y, duration)
@@ -580,7 +580,7 @@ K = {
   end,
 
   -- Checks if the Scene currently has a background
-  cBga = function (scene)
+  gBga = function (scene)
     return scene.Visual._bg
   end,
   -- Sets the current Background while removing the old one
@@ -613,7 +613,7 @@ K = {
       }
     })
     
-    if K.cBga(scene) then
+    if K.gBga(scene) then
       Kii.Container.selfDestruct(
         scene.Containers[Kii.Scene.findIndex(scene, scene.Visual._bg)],
         duration
@@ -627,7 +627,7 @@ K = {
 
   -- Adds a Character to the scene
   -- Returns the ID of the Character's sprite
-  aCha = function (scene, Character, Emotion, position, animation, duration, variant)
+  aSpr = function (scene, Character, Emotion, position, animation, duration, variant)
     local character = Kii.Characters[Character].Sprite
     variant = variant or "Default"
     local sprite = Kii.Sprite.create(character, variant, Emotion, position)
@@ -635,7 +635,7 @@ K = {
     return Kii.Scene.addSprite(scene, sprite, animation, duration)
   end,
   -- Removes a Character from the scene
-  rCha = function (scene, character, animation, length)
+  rSpr = function (scene, character, animation, length)
     character = Kii.Characters[character].Sprite
     Kii.Container.selfDestruct(
       scene.Containers[Kii.Scene.findIndex(scene, scene.Visual.Sprites[character])],
@@ -700,7 +700,7 @@ K = {
     return {oldX, oldY}
   end,
   -- Transforms a Character in the scene
-  tCha = function (scene, character, type, magnitude, duration)
+  tSpr = function (scene, character, type, magnitude, duration)
     character = Kii.Characters[character].Sprite
 
     if type == "Zoom" then
@@ -731,7 +731,7 @@ K = {
   end,
   -- Checks if a Flag exists
   -- Returns the contents of the flag
-  cFlg = function (scene, flag)
+  gFlg = function (scene, flag)
     return scene.Flags[flag]
   end,
 

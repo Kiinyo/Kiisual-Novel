@@ -23,7 +23,7 @@ local Characters = {
       _color = "White",
       -- This can be nil if you want to make a character
       -- that only speaks and is never seen, but make sure
-      -- to stick to 'sSpk' and never try to 'aCha' them!
+      -- to stick to 'sSpk' and never try to 'aSpr' them!
       Sprite =  nil
     }
 }

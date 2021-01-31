@@ -9,9 +9,6 @@ end
 
 function love.update()
   Kii.Scene.update(scene)
-  if love.keyboard.isDown("a") then
-    print(scene.Visual._bg)
-  end
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
