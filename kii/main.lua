@@ -16,17 +16,17 @@ Kii.Math = {
   sign = function (value)
     return (value / math.abs(value))
   end,
-  lerp = function (origin, target, time, float)
-    if time == 0 then
+  lerp = function (origin, target, duration, float)
+    if duration == 0 then
       print("You tried to divide by zero!")
       return target
     end
     if float then
-      return origin + ((target - origin) / time)
+      return origin + ((target - origin) / duration)
     end
-    return math.floor(origin + ((target - origin) / time))
+    return math.floor(origin + ((target - origin) / duration))
   end,
-  ease = function (origin, target, time, float)
+  ease = function (origin, target, duration, float)
     return math.floor(origin + ((target - origin) / 2))
   end
 }
@@ -1089,8 +1089,8 @@ Kii.Container = {
   end,
 
   -- Flags container for deletion after time
-  selfDestruct = function (container, time, type)
-    container._countdown = time or 0
+  selfDestruct = function (container, duration, type)
+    container._countdown = duration or 0
     if type == "Fade Out" then
       container._fadeout = true
     elseif type == "Stage Left" then
@@ -1098,14 +1098,14 @@ Kii.Container = {
         container,
         love.graphics.getWidth(),
         container.Position._y,
-        time
+        duration
       )
     elseif type == "Stage Right" then
       Kii.Container.move(
         container,
         0 - container.Dimensions._width,
         container.Position._y,
-        time
+        duration
       )
     end
   end,
@@ -1202,7 +1202,7 @@ Kii.Container = {
     end
   end,
   -- Ordering the actual animation
-  move = function (container, x, y, time, type)
+  move = function (container, x, y, duration, type)
     Kii.Container.setPosition(
       container,
       container.Reposition._targetX,
@@ -1212,7 +1212,7 @@ Kii.Container = {
     container.Reposition._type = type or "Linear"
     container.Reposition._targetX = x or container.Position._x
     container.Reposition._targetY = y or container.Position._y
-    container.Reposition._frame = time or 10
+    container.Reposition._frame = duration or 10
   end,
 
   -- Set the container's width and height
@@ -1282,7 +1282,7 @@ Kii.Container = {
     end
   end,
   -- Ordering the actual animation
-  scale = function (container, width, height, time, type)
+  scale = function (container, width, height, duration, type)
     Kii.Container.setDimensions(
       container,
       container.Resize._targetWidth,
@@ -1292,7 +1292,7 @@ Kii.Container = {
     container.Resize._type = type or "Linear"
     container.Resize._targetWidth = width or container.Dimensions._width
     container.Resize._targetHeight = height or container.Dimensions._height
-    container.Resize._frame = time or 10
+    container.Resize._frame = duration or 10
   end,
   flip = function (container, length)
     length = length or 0
@@ -1308,6 +1308,73 @@ Kii.Container = {
       container.Position._y,
       length
     )
+  end,
+  zoom = function (container, magnitude, length)
+    local width = container.Resize._targetWidth
+    local height = container.Resize._targetHeight
+
+    Kii.Container.scale(
+      container,
+      container.Resize._targetWidth * magnitude,
+      container.Resize._targetHeight * magnitude,
+      length
+    )
+    Kii.Container.move(
+      container,
+      math.floor(container.Reposition._targetX - ((container.Resize._targetWidth - width) / 2)),
+      math.floor(container.Reposition._targetY - ((container.Resize._targetHeight - height) / 2)),
+      length
+    )
+
+  end,
+  enterAnimation = function (container, animation, length)
+    print(animation)
+    if animation == "Fade In" then
+      Kii.Container.setShader(container, animation, length)
+    elseif animation == "Zoom In" then
+      Kii.Container.setDimensions(
+        container,
+        1,
+        1,
+        true
+      )
+      Kii.Container.setPosition(
+        container,
+        love.graphics.getWidth() / 2,
+        love.graphics.getHeight() / 2,
+        true
+      )
+      Kii.Container.scale(
+        container,
+        love.graphics.getWidth(),
+        love.graphics.getHeight(),
+        length
+      )
+      Kii.Container.move(
+        container,
+        0,
+        0,
+        length
+      )
+    elseif animation == "Stage Right" then
+      local x = container.Reposition._targetX
+      Kii.Container.setPosition(
+        container,
+        0 - container.Dimensions._width,
+        container.Position._y,
+        true
+      )
+      Kii.Container.move(container, x, container.Position._y, length)
+    elseif animation == "Stage Left" then
+      local x = container.Reposition._targetX
+      Kii.Container.setPosition(
+        container,
+        love.graphics.getWidth(),
+        container.Position._y,
+        true
+      )
+      Kii.Container.move(container, x, container.Position._y, length)
+    end
   end
 }
 
@@ -1464,27 +1531,7 @@ Kii.Scene = {
   addSprite = function (scene, sprite, animation, length)
     length = length or 25
 
-    local x = sprite.Position._x
-
-    if animation == "Fade In" then
-      Kii.Container.setShader(sprite, animation, length)
-    elseif animation == "Stage Right" then
-      Kii.Container.setPosition(
-        sprite,
-        0 - sprite.Dimensions._width,
-        sprite.Position._y,
-        true
-      )
-      Kii.Container.move(sprite, x, sprite.Position._y, length)
-    elseif animation == "Stage Left" then
-      Kii.Container.setPosition(
-        sprite,
-        love.graphics.getWidth(),
-        sprite.Position._y,
-        true
-      )
-      Kii.Container.move(sprite, x, sprite.Position._y, length)
-    end
+    Kii.Container.enterAnimation(sprite, animation, length)
 
     scene.Visual.Sprites[sprite._name] = Kii.Scene.addContainer(scene, sprite)
     return scene.Visual.Sprites[sprite._name]
@@ -1858,7 +1905,7 @@ K = {
     chapter = chapter or scene.Script._current
     page = page or scene.Script._index
 
-    Kii.Scripts[chapter][page](scene)
+    Kii.Chapters[chapter][page](scene)
     Kii.Scene.update(scene)
   end,
   -- Sets the scene's current page and executes
@@ -1921,14 +1968,14 @@ K = {
     return Kii.Scene.findIndex(scene, scene.Text._textBox)
   end,
 
-  mTbx = function (scene, x, y, time)
-    time = time or 20
-    Kii.Container.move(scene.Containers[K.gTbx(scene)], x, y, time)
+  mTbx = function (scene, x, y, duration)
+    duration = duration or 20
+    Kii.Container.move(scene.Containers[K.gTbx(scene)], x, y, duration)
   end,
 
-  tTbx = function (scene, width, height, time)
-    time = time or 20
-    Kii.Container.scale(scene.Containers[K.gTbx(scene)], width, height, time)
+  tTbx = function (scene, width, height, duration)
+    duration = duration or 20
+    Kii.Container.scale(scene.Containers[K.gTbx(scene)], width, height, duration)
   end,
 
   -- Executes a specified sound effect
@@ -1941,8 +1988,8 @@ K = {
     return scene.Visual._bg
   end,
   -- Sets the current Background while removing the old one
-  sBga = function (scene, Background, animation, time)
-    time = time or 0
+  sBga = function (scene, Background, animation, duration)
+    duration = duration or 0
     Background = Kii.Container.create(Kii.Visuals.Background[Background])
 
     Kii.Container.setDimensions(
@@ -1955,68 +2002,23 @@ K = {
     if K.cBga(scene) then
       Kii.Container.selfDestruct(
         scene.Containers[Kii.Scene.findIndex(scene, scene.Visual._bg)],
-        time
+        duration
       )
     end
 
-    if animation == "Zoom In" then
-      Kii.Container.setDimensions(
-        Background,
-        1,
-        1,
-        true
-      )
-      Kii.Container.setPosition(
-        Background,
-        love.graphics.getWidth() / 2,
-        love.graphics.getHeight() / 2,
-        true
-      )
-      Kii.Container.scale(
-        Background,
-        love.graphics.getWidth(),
-        love.graphics.getHeight(),
-        time
-      )
-      Kii.Container.move(
-        Background,
-        0,
-        0,
-        time
-      )
-
-    elseif animation == "Stage Right" then
-      Kii.Container.setPosition(
-        Background,
-        0 - Background.Dimensions._width,
-        0,
-        true
-      )
-      Kii.Container.move(Background, 0, 0, time)
-    elseif animation == "Stage Left" then
-      Kii.Container.setPosition(
-        Background,
-        Background.Dimensions._width + 1,
-        0,
-        true
-      )
-      Kii.Container.move(Background, 0, 0, time)
-
-    elseif animation == "Fade In" then
-      Kii.Container.setShader(Background, animation, time)
-    end
+    Kii.Container.enterAnimation(Background, animation, duration)
 
     Kii.Scene.addContainer(scene, Background)
   end,
 
   -- Adds a Character to the scene
   -- Returns the ID of the Character's sprite
-  aCha = function (scene, Character, Emotion, position, animation, speed, variant)
+  aCha = function (scene, Character, Emotion, position, animation, duration, variant)
     local character = Kii.Script.Characters[Character].Sprite
     variant = variant or "Default"
     local sprite = Kii.Sprite.create(character, variant, Emotion, position)
 
-    return Kii.Scene.addSprite(scene, sprite, animation, speed)
+    return Kii.Scene.addSprite(scene, sprite, animation, duration)
   end,
   -- Removes a Character from the scene
   rCha = function (scene, character, animation, length)
@@ -2051,7 +2053,7 @@ K = {
   -- Moves a Character in the scene to the designated coordinates
   -- Can nil x and y coordinates to maintain them
   -- Returns {oldX, oldY}
-  mCha = function (scene, character, x, y, speed, raw)
+  mCha = function (scene, character, x, y, duration, raw)
     local oldX = Kii.Scene.getSprite(scene, character).Position._x
     local oldY = Kii.Scene.getSprite(scene, character).Position._y
 
@@ -2074,39 +2076,27 @@ K = {
     end
 
     character = Kii.Script.Characters[character].Sprite
-    speed = speed or 30
+    duration = duration or 30
 
     Kii.Container.move(
       Kii.Scene.getSprite(scene, character),
-      x, y, speed
+      x, y, duration
     )
 
     return {oldX, oldY}
   end,
   -- Transforms a Character in the scene
-  tCha = function (scene, character, type, magnitude, speed)
+  tCha = function (scene, character, type, magnitude, duration)
     character = Kii.Script.Characters[character].Sprite
-    local width = Kii.Scene.getSprite(scene, character).Resize._targetWidth
 
     if type == "Zoom" then
-      Kii.Container.scale(
-        Kii.Scene.getSprite(scene, character),
-        Kii.Scene.getSprite(scene, character).Resize._targetWidth * magnitude,
-        Kii.Scene.getSprite(scene, character).Resize._targetHeight * magnitude,
-        speed
-      )
-      Kii.Container.move(
-        Kii.Scene.getSprite(scene, character),
-        math.floor(Kii.Scene.getSprite(scene, character).Reposition._targetX - ((Kii.Scene.getSprite(scene, character).Resize._targetWidth - width) / 2)),
-        Kii.Scene.getSprite(scene, character).Reposition._targetY,
-        speed
-      )
+      Kii.Container.zoom(Kii.Scene.getSprite(scene, character), magnitude, duration)
     elseif type == "Flip" then
-      Kii.Container.flip(Kii.Scene.getSprite(scene, character), speed)
+      Kii.Container.flip(Kii.Scene.getSprite(scene, character), duration)
     end
   end,
 
-  aCon = function (scene, container, x, y, animation, time)
+  aCon = function (scene, container, x, y, animation, duration)
     container = Kii.Container.create(Kii.Containers[container])
     x = x or container.Position._x
     y = y or container.Position._y
@@ -2133,7 +2123,7 @@ K = {
 
 }
 
-Kii.Scripts = {
+Kii.Chapters = {
   Debug = {
     -- 1 - 10
     function (s) K.sSpk(s, "Kiinyo", "Hey there and welcome to my VN frameworks's tech demo!") end,
