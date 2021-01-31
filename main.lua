@@ -1,4 +1,4 @@
-local Kii = require "kii/main"
+Kii = require "kii/kii"
 
 function love.load()
   love.graphics.setBackgroundColor(Kii.Render.colorFind("Black"))
