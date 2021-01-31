@@ -1413,10 +1413,10 @@ Kii.Sprite = {
   changeBase = function(sprite, base)
     base = Kii.Element.create({
         _name = sprite._name,
-        _type = "SpriteBase",
+        _type = "Image",
         Dimensions = {
           _color = "Clear",
-          _shape = base,
+          _shape = love.graphics.newImage("media/visual/sprites/"..sprite._name.."/bases/"..base..".png"),
         },
         Text = {
           _text = "@None"
@@ -1430,10 +1430,10 @@ Kii.Sprite = {
   changeExpression = function (sprite, expression)
     expression = Kii.Element.create({
         _name = sprite._name,
-        _type = "SpriteExpression",
+        _type = "Image",
         Dimensions = {
           _color = "Clear",
-          _shape = expression,
+          _shape = love.graphics.newImage("media/visual/sprites/"..sprite._name.."/expressions/"..expression..".png"),
         },
         Text = {
           _text = "@None"
@@ -1445,19 +1445,6 @@ Kii.Sprite = {
     sprite.Sprite._expression = Kii.Container.addElement(sprite, expression)
 
   end
-}
-
-Kii.Sprites = {
-  Default = {
-    Bases = {
-      Default = love.graphics.newImage("media/visual/sprites/default/bases/default.png")
-    },
-    Expressions = {
-      Default = love.graphics.newImage("media/visual/sprites/default/expressions/default.png"),
-      Happy = love.graphics.newImage("media/visual/sprites/default/expressions/happy.png"),
-      Sad = love.graphics.newImage("media/visual/sprites/default/expressions/sad.png"),
-    }
-  }
 }
 
 Kii.Script = {

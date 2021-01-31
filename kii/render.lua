@@ -22,7 +22,6 @@ Kii.Render = {
         end
         print("Fonts loaded!")
         local index = 1
-        print("Started Sprite loading..")
     end,
     -- Takes in a color name and sets the color to be drawn next
     setColor = function (color, alpha, palette)
@@ -348,11 +347,7 @@ Kii.Render = {
       local x, y, width, height = Kii.Render.applyAnimations(element)
   
       if element._type == "Image" then 
-        Kii.Render.drawImage(Kii.Render.Images[element.Dimensions._shape], x, y, width, height, true)
-      elseif element._type == "SpriteBase" then
-        Kii.Render.drawImage(Kii.Sprites[element._name].Bases[element.Dimensions._shape], x, y, width, height, true)
-      elseif element._type == "SpriteExpression" then
-        Kii.Render.drawImage(Kii.Sprites[element._name].Expressions[element.Dimensions._shape], x, y, width, height, true)
+        Kii.Render.drawImage(element.Dimensions._shape, x, y, width, height, true)
       else
         local jitter = false
         Kii.Render.polygon(x, y, width, height, element.Dimensions._shape)
