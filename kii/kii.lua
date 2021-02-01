@@ -197,19 +197,30 @@ K = {
   end,
 
   -- Executes a specified sound effect
-  eSfx = function (scene, soundEffect, looping)
-    local looping = looping or false
+  eSfx = function (scene, soundEffect)
     soundEffect = love.audio.newSource("media/audio/sfx/"..soundEffect, "stream")
-    soundEffect:setLooping(looping)
+    soundEffect:setLooping(false)
     soundEffect:play()
   end,
 
-  -- Executes a specified bgm
-  eBgm = function (scene, track, looping)
-    local looping = looping or false
-    track = love.audio.newSource("media/audio/bgm/"..track, "stream")
-    track:setLooping(looping)
-    track:play()
+  -- Sets the current BGM
+  sBgm = function (scene, track, looping, dontPlay)
+    looping = looping or false
+    local oldSource = K.gFlg(scene, "BGM")
+    K.sFlg(scene, "BGM", track)
+
+    if oldSource ~= track then
+
+      if scene.Audio._bgm then love.audio.stop(scene.Audio._bgm) end
+
+      scene.Audio._bgm = love.audio.newSource("media/audio/bgm/"..track, "stream")
+      scene.Audio._bgm:setLooping(looping)
+
+      if dontPlay then else scene.Audio._bgm:play() end
+
+    else
+      -- Do nothing!
+    end
   end,
 
   -- Checks if the Scene currently has a background

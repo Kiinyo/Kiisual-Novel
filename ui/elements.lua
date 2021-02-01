@@ -10,7 +10,7 @@ local template = {
   -- with the same name!
 
   _name = "Default Element Name", -- "String"
-  
+
   -- This indicates what the element is to other parts
   -- of the program, use "Image" if you want do display
   -- an image from the media/visual/images folder!
@@ -248,12 +248,13 @@ local template = {
   }
 
 }
+
 -- A condensed cheat sheet of sorts with all the default values
 local template2 = {
   _name = "Default Element Name", -- Make sure it's unique!
   _type = "Default Type", -- "Image" for images
   _interactive = false, -- enables Actions
-  Dimensions = { -- 
+  Dimensions = {
     _relative = "Both", -- "Width", "Height", "Both", "Neither"
     _height = 1, -- Percentage if _relative, Pixel if not
     _width = 1, -- Percentage if _relative, Pixel if not
