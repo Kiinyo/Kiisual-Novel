@@ -4,6 +4,7 @@ Kii.Render = {
     Palette = require "ui/palette",
     Shapes = require "ui/shapes",
     Animations = require "ui/animations",
+    Shaders = require "ui/shaders",
     -- Takes in a color name and sets the color to be drawn next
     setColor = function (color, alpha, palette)
       color = color or "Black"
@@ -95,67 +96,26 @@ Kii.Render = {
       local r, g, b = Kii.Render.colorFind(element.Dimensions._color, element.Dimensions._palette)
       local a = element.Dimensions._alpha
       -- Shaders
-      if element.Shader._type == "Fade To" then
-        local newR, newG, newB = Kii.Render.colorFind(element.Shader._target)
-    
-        r = Kii.Math.clamp(r + ((newR - r) * (element.Shader._frame / element.Shader._modifier)), r, newR)
-        g = Kii.Math.clamp(g + ((newG - g) * (element.Shader._frame / element.Shader._modifier)), g, newG)
-        b = Kii.Math.clamp(b + ((newB - b) * (element.Shader._frame / element.Shader._modifier)), b, newB)
-    
-        if element.Shader._frame < element._modifier then
-          element.Shader._frame = element.Shader._frame + 1
-        else
-          element.Dimensions._color = element.Shader._target
-          element.Shader._frame = 0
-          element.Shader._modifier = 1
-          element.Shader._type = "None"
-          element.Shader._target = "None"
-        end
-      elseif element.Shader._type == "Darken" then
-        -- Darken animation!
-        -- Darkens to black over 100 frames
-        -- Modifier [0 - 1] determines how close to white
-        local newR, newG, newB = Kii.Render.colorFind("Black")
-    
-        r = Kii.Math.clamp(r + ((newR - r) * (element.Shader._frame / 100)) * element.Shader._modifier, newR, r)
-        g = Kii.Math.clamp(g + ((newG - g) * (element.Shader._frame / 100)) * element.Shader._modifier, newG, g)
-        b = Kii.Math.clamp(b + ((newB - b) * (element.Shader._frame / 100)) * element.Shader._modifier, newB, b)
-        if element.Shader._frame < 100 then
-          element.Shader._frame = element.Shader._frame + 1
-        end
-      elseif element.Shader._type == "Fade In" then
-        -- Fading in animation!
-        -- Duration: _modifier frames for full effect!
-        -- Effect increases the alpha from 0% to 100%
-        a = a * Kii.Math.clamp(0 + (1 * (element.Shader._frame / element.Shader._modifier )), 0, 1) -- Alpha calculation
-        -- Increment frame if it's less than 10!
-        if element.Shader._frame < element.Shader._modifier then element.Shader._frame = element.Shader._frame + 1
-        else
-          element.Shader._type = "None"
-        end
-      elseif element.Shader._type == "Fade Out" then
-        -- Fading out animation!
-        -- Duration: 10 frames for full effect!
-        -- Effect decreases the Alpha from 100% to 0%
-        a = a * Kii.Math.clamp(1 - (1 * (element.Shader._frame / element.Shader._modifier)), 0, 1) -- Alpha calculation
-        -- Increment frame if it's less than 10!
-        if element.Shader._frame < element.Shader._modifier then element.Shader._frame = element.Shader._frame + 1
-        else
-          element._deleteMe = true
-        end
-      elseif element.Shader._type == "Lighten" then
-        -- Change color animation!
-        -- Lightens to white over 100 frames
-        -- Modifier [0 - 1] determines how close to white
-        local newR, newG, newB = Kii.Render.colorFind("White")
-    
-        r = Kii.Math.clamp(r + ((newR - r) * (element.Shader._frame / 100)) * element.Shader._modifier, r, newR)
-        g = Kii.Math.clamp(g + ((newG - g) * (element.Shader._frame / 100)) * element.Shader._modifier, g, newG)
-        b = Kii.Math.clamp(b + ((newB - b) * (element.Shader._frame / 100)) * element.Shader._modifier, b, newB)
-    
-        if element.Shader._frame < 100 then
-          element.Shader._frame = element.Shader._frame + 1
-        end
+
+      r, g, b, a,
+      element.Shader._frame, element.Shader._modifier, element.Shader._target =
+      Kii.Render.Shaders[element.Shader._type](
+        r, g, b, a, 
+        element.Shader._frame, element.Shader._modifier, element.Shader._target,
+        element.Dimensions._palette
+      )
+
+      if element.Shader._modifier == "Delete" then
+        element._deleteMe = true
+      elseif element.Shader._modifier == "None" then
+        element.Shader._frame = 0
+        element.Shader._modifier = 1
+        element.Shader._type = "None"
+      elseif element.Shader._modifier == "Transfer" then
+        element.Shader._frame = 0
+        element.Shader._modifier = 1
+        element.Shader._type = "None"
+        element.Dimensions._color = element.Shader._target
       end
     
       love.graphics.setColor(r, g, b, a)

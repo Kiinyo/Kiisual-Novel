@@ -39,7 +39,8 @@ Kii.Element.Actions = {
   Glow = function (self, container, scene)
     self.Shader._type = "Lighten"
     self.Shader._frame = 0
-    self.Shader._modifier = 0.5
+    self.Shader._modifier = 30
+    self.Shader._target = 0.5
   end,
   SlideRight = function (self, container, scene)
     self.Animation._type = "Slide_Right"
@@ -67,9 +68,7 @@ Kii.Element.Actions = {
   end,
   Excite = function (self, container, scene)
     self.Animation._type = "Jitter_Everything"
-    self.Shader._type = "Lighten"
-    self.Shader._frame = 0
-    self.Shader._modifier = 0.5
+    Kii.Element.Actions.Glow(self, container, scene)
   end,
   Press = function (self, container, scene)
     self.Animation._type = "Press_Down"
