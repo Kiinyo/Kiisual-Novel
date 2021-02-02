@@ -3,6 +3,7 @@
 Kii.Render = {
     Palette = require "ui/palette",
     Shapes = require "ui/shapes",
+    Animations = require "ui/animations",
     -- Takes in a color name and sets the color to be drawn next
     setColor = function (color, alpha, palette)
       color = color or "Black"
@@ -165,43 +166,24 @@ Kii.Render = {
       local y = element.Position._y
       local width = element.Dimensions._width
       local height = element.Dimensions._height
-      if element.Animation._type == "Jitter" then
-        x = math.floor(x + element.Animation._modifier * math.random() - element.Animation._modifier / 2)
-        y = math.floor(y + element.Animation._modifier * math.random() - element.Animation._modifier / 2)
-      elseif element.Animation._type == "Press" then
-        y = y + element.Dimensions._height / 16
-      elseif element.Animation._type == "Slide Right" then
-        x = x + element.Animation._frame
-        if element.Animation._frame < element.Animation._modifier then
-          element.Animation._frame = element.Animation._frame + 1
-        end
-      elseif element.Animation._type == "Press Right" then
-        x = x + 10
-      elseif element.Animation._type == "Return Right" then
-        x = x + element.Animation._frame
-        if element.Animation._frame <= 0 then
+
+      if element.Animation._type ~= "None" then
+
+        x, y, width, height,
+        element.Animation._frame, element.Animation._modifier
+        =
+        Kii.Render.Animations[element.Animation._type](
+          x, y, width, height, 
+          element.Animation._frame, element.Animation._modifier
+        )
+        
+        if element.Animation._modifier == "None" then
           element.Animation._frame = 0
-          element.Animation._modifier = 1
           element.Animation._type = "None"
-        else
-          element.Animation._frame = element.Animation._frame - 1
-        end
-  
-      elseif element.Animation._type == "Slide Down" then
-        y = y + element.Animation._frame
-        if element.Animation._frame < element.Animation._modifier then
-          element.Animation._frame = element.Animation._frame + 1
-        end
-      elseif element.Animation._type == "Return Down" then
-        y = y + element.Animation._frame
-        if element.Animation._frame <= 0 then
-          element.Animation._frame = 0
           element.Animation._modifier = 1
-          element.Animation._type = "None"
-        else
-          element.Animation._frame = element.Animation._frame - 1
         end
       end
+
       return x, y, width, height
     end,
     -- Draw an image at x, y, while also maintaining aspect ratio if needed

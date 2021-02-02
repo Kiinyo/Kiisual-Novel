@@ -24,7 +24,7 @@ Kii.Element.Actions = {
 
   end,
   FancyWarn = function (self, container, scene)
-    self.Animation._type = "Slide Down"
+    self.Animation._type = "Slide_Down"
     self.Animation._modifier = 10
     if scene.Script._index < 60 then
       K.sPge(scene, "Demo", 61)
@@ -42,18 +42,18 @@ Kii.Element.Actions = {
     self.Shader._modifier = 0.5
   end,
   SlideRight = function (self, container, scene)
-    self.Animation._type = "Slide Right"
+    self.Animation._type = "Slide_Right"
     self.Animation._modifier = 10
   end,
   ReturnRight = function (self, container, scene)
-    self.Animation._type = "Return Right"
+    self.Animation._type = "Return_Right"
   end,
   SlideDown = function (self, container, scene)
-    self.Animation._type = "Slide Down"
+    self.Animation._type = "Slide_Down"
     self.Animation._modifier = 10
   end,
   ReturnDown = function (self, container, scene)
-    self.Animation._type = "Return Down"
+    self.Animation._type = "Return_Down"
   end,
   FancyDeleteContainer = function (self, container, scene)
     Kii.Element.Actions.DeleteContainer(self, container, scene)
@@ -66,13 +66,13 @@ Kii.Element.Actions = {
     -- Nothing here!
   end,
   Excite = function (self, container, scene)
-    self.Animation._type = "Jitter"
+    self.Animation._type = "Jitter_Everything"
     self.Shader._type = "Lighten"
     self.Shader._frame = 0
     self.Shader._modifier = 0.5
   end,
   Press = function (self, container, scene)
-    self.Animation._type = "Press"
+    self.Animation._type = "Press_Down"
     self.Animation._frame = 0
   end,
   Reset = function (self, container, scene)
