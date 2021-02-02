@@ -1,22 +1,13 @@
 
 -- All things related to actually rendering the game!
 Kii.Render = {
-    Palette = {
-      Tauriel = { -- https://lospec.com/palette-list/tauriel-16
-        Black  = { 023/255, 023/255, 028/255 },
-        White  = { 220/255, 214/255, 207/255 },
-        Red    = { 155/255, 053/255, 053/255 },
-        Blue   = { 059/255, 083/255, 106/255 },
-        Yellow = { 217/255, 189/255, 102/255 },
-        Clear  = {255,255,255}
-      }
-    },
+    Palette = require "ui/palette",
     Shapes = require "ui/shapes",
     -- Takes in a color name and sets the color to be drawn next
     setColor = function (color, alpha, palette)
       color = color or "Black"
       alpha = alpha or 1
-      palette = palette or "Tauriel"
+      palette = palette or "Default"
     
       love.graphics.setColor(Kii.Render.Palette[palette][color][1],
                              Kii.Render.Palette[palette][color][2],
@@ -26,7 +17,7 @@ Kii.Render = {
     -- Returns, R, G, B of color given
     colorFind = function (color, palette)
       color = color or "Black"
-      palette = palette or "Tauriel"
+      palette = palette or "Default"
     
       return Kii.Render.Palette[palette][color][1],
              Kii.Render.Palette[palette][color][2],
@@ -100,7 +91,7 @@ Kii.Render = {
     -- Preps the draw function's colors
     applyShaders = function (element)
       -- A bit of shenaniganery
-      local r, g, b = Kii.Render.colorFind(element.Dimensions._color)
+      local r, g, b = Kii.Render.colorFind(element.Dimensions._color, element.Dimensions._palette)
       local a = element.Dimensions._alpha
       -- Shaders
       if element.Shader._type == "Fade To" then
@@ -250,7 +241,7 @@ Kii.Render = {
       -- The fun part, we need to just get the current alpha
       local r, g, b, a = love.graphics.getColor()
       if element.Text._text ~= "@None" then
-        Kii.Render.setColor(element.Text._color, a)
+        Kii.Render.setColor(element.Text._color, a, element.Dimensions._palette)
         Kii.Render.setFont(element.Text._font, element.Text._size)
         -- Now we can render the text and be done!
         Kii.Render.printText(element.Text._text,

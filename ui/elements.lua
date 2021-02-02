@@ -1,6 +1,6 @@
 -- A breakdown of everything an Element has
 -- Included are the default values. If your
--- element uses the defaule value you don't
+-- element uses the default value you don't
 -- have to define it!
 local template = {
 
@@ -51,7 +51,16 @@ local template = {
     -- or it'll add the color's hue to your image! You can find a
     -- a complete list of colors in the palette.lua file!
 
-    _color = "Blue", -- "Red", "Clear", etc.
+    -- In addition to naming the color directly you can use
+    -- Primary, Accent, or Detail to use the parent Container's
+    -- Color's as well!
+
+    _color = "Blue", -- "Red", "Clear", "Primary", etc.
+
+    -- And obviously we'll ned to determine which palette we're
+    -- pulling the color from!
+
+    _palette = "Default",
 
     -- How many pixels of space between the edge of the element
     -- and the element's text. Hardcoded as pixels at the moment
@@ -260,6 +269,7 @@ local template2 = {
     _width = 1, -- Percentage if _relative, Pixel if not
     _shape = "Box", -- shapes.lua or media/visual/images
     _color = "Blue", -- palette.lua "Clear" for images!
+    _palette = "Default", -- palette.lua for the different ones!
     _alpha = 1, -- 0 = tranparent, 1 = solid
     _padding = 10, -- Hard coded as pixel values
   },
@@ -341,7 +351,7 @@ local Elements = {
       _height = 50,
       _width = 0.25,
       _shape = "Demo_Header",
-      _color = "Accent",
+      _color = "Cyan",
       _padding = 15
     },
     Position = {

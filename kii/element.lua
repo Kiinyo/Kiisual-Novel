@@ -20,6 +20,7 @@ Kii.Element = {
           _color = template.Dimensions._color or "Blue",
           _padding = template.Dimensions._padding or 10,
           _alpha = template.Dimensions._alpha or 1,
+          _palette = template.Dimensions._palette or "Default"
         },
         Position = { -- Becomes % of container width if adopted by a container
           _x = template.Position._x or 0,
