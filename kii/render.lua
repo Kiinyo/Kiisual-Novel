@@ -11,7 +11,7 @@ Kii.Render = {
         Clear  = {255,255,255}
       }
     },
-    Fonts = {},
+    Shapes = require "ui/shapes",
     -- Takes in a color name and sets the color to be drawn next
     setColor = function (color, alpha, palette)
       color = color or "Black"
@@ -67,130 +67,34 @@ Kii.Render = {
       return wrappedText
     end,
     -- Renders a polygon
-    polygon = function (x, y, width, height, shape, jitter)
-      local vertices = {}
-      if shape == "Right Iso Tri" then -- looks like ▶
-        vertices = {x, y,
-                    x + width, y + math.floor(height / 2),
-                    x, y + height}
-        -- Placeholder
-      elseif shape == "Text Box Header" then
-        vertices = {x, y,
-                    math.floor(x + width * (7/8)), y,
-                    x + width, y + height,
-                    x, y + height}
-      elseif shape == "Fancy Box" then
-        vertices =       {x, y,
-                          x + width, y,
-                          x + width, y + height,
-                          x, y + height}
-                          jitter = true
-      elseif shape == "Fancy Body" then
-        vertices = {x, y + height * 5/16,
-                    x + width, y,
-                    x + width * (7/8), y + height * (7/8),
-                    x + width / 16, y + height * (13/16)}
-                    jitter = true
-      elseif shape == "Fancy Header" then
-        vertices = {x, y,
-                    x + width, y + height / 8,
-                    x + width, y + height,
-                    x, y + height}
-                    jitter = true
-  
-      elseif shape == "Fancy Decoration" then
-        vertices = {x, y,
-                    x + width, y,
-                    x, y + height}
-                    jitter = true
-      elseif shape == "Shadow" then
-        vertices = {x + width, y + 10,
-                    x + width + 10, y + 10,
-                    x + width + 10, y + 10 + height,
-                    x + 10, y + 10 + height,
-                    x + 10, y + height}
-      elseif shape == "Rounded Box" then
-        local e = 10
-        -- Draw the top bar
-        love.graphics.polygon('fill',
-          x + e, y,
-          x + width - e, y,
-          x + width - e, y + e,
-          x + e, y + e)
-        -- Draw the bottom bar
-        love.graphics.polygon('fill',
-          x + e, y + height - e,
-          x + width - e, y + height - e,
-          x + width - e, y + height,
-          x + e, y + height
-        )
-        -- Draw the main bar
-        love.graphics.polygon('fill',
-          x, y + e,
-          x + width, y + e,
-          x + width, y + height - e,
-          x, y + height - e
-        )
-        -- NW arch
-        love.graphics.arc("fill",
-          x + e, y + e, 
-          e, -3.1415, -3.1415 / 2, 10
-        )
-        -- NE arch
-        love.graphics.arc("fill",
-          x + width - e, y + e, 
-          e, 0, -3.1415 / 2, 10
-        )
-        -- SE arch
-        love.graphics.arc("fill",
-          x + width - e, y + height - e, 
-          e, 0, 3.1415 / 2, 10
-        )
-        -- SW arch
-        love.graphics.arc("fill",
-          x + e, y + height - e, 
-          e, 3.1415, 3.1415 / 2, 10
-        )
-        shape = "None"
-      elseif shape == "Obround" then
-        local radius = math.floor(height / 2)
-        -- Draw the rectangle
-        love.graphics.polygon("fill",
-          x + radius, y,
-          x + width - radius, y,
-          x + width - radius, y + height,  
-          x + radius, y + height
-        )
-        -- Draw the left side arc
-        love.graphics.arc("fill",
-          x + radius, y + radius,
-          radius, 3.1415 / 2, 3.1415 * 3/2,
-          20
-          )
-        love.graphics.arc("fill",
-          x + width - radius, y + radius,
-          radius, -3.1415 / 2, 3.1415 / 2,
-          20
-        )
-    
-        shape = "None"
-      else -- Defaults to box
-        vertices =       {x, y,
-                          x + width, y,
-                          x + width, y + height,
-                          x, y + height}
-      end
-      if shape ~= "None" then 
-        if jitter then
-          local index = 1
-          while index <= #vertices do
+    polygon = function (x, y, width, height, shape, wiggly)
+      -- First find out if there even is something to draw
+      if Kii.Render.Shapes[shape] then
+        -- Set up our variables
+        local vertices = {}
+        local index = 1
+        local pointX = 0
+        local pointY = 0
+        -- Generate all the points and add them to the grid
+        while index <= #Kii.Render.Shapes[shape] do
+          -- Define the points to be drawn
+          pointX = Kii.Render.Shapes[shape][index][1] * width + x
+          pointY = Kii.Render.Shapes[shape][index][2] * height + y
+          -- Add the wiggle if needed
+          if wiggly then
             if math.random(1, 3) == 3 then
-              vertices[index] = vertices[index] + math.random(-3, 3)
+              pointX = pointX + math.random(-3, 3)
+              pointY = pointY + math.random(-3, 3)
             end
-            index = index + 1
           end
+          -- Add the points to the vertices
+          table.insert(vertices, pointX)
+          table.insert(vertices, pointY)
+          -- Finally increment the counter
+          index = index + 1
         end
-        love.graphics.polygon('fill', vertices) 
+        -- Finally draw the object based on the generated points.
+        love.graphics.polygon('fill', vertices)
       end
     end,
     -- Preps the draw function's colors

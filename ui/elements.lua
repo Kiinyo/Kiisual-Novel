@@ -340,7 +340,7 @@ local Elements = {
       _relative = "Width",
       _height = 50,
       _width = 0.25,
-      _shape = "Text Box Header",
+      _shape = "Demo_Header",
       _color = "Accent",
       _padding = 15
     },
@@ -382,41 +382,12 @@ local Elements = {
       leave = "Reset",
     }
   },
-  Demo_CloseContainerButton = {
-    _name = "Demo CloseContainerButton",
-    _type = "Button",
-    _interactive = true,
-    Dimensions = {
-      _relative = "Neither",
-      _height = 40,
-      _width = 40,
-      _shape = "Rounded Box",
-      _color = "Red"
-    },
-    Position = {
-      _xOffset = -20,
-      _yOffset = 20,
-      _alignX = "Right",
-      _alignY = "Up"
-    },
-    Text = {
-      _text = "@None"
-    },
-    Actions = {
-      down = "Press",
-      up = "Reset",
-      click = "DeleteContainer",
-      abandon = "Reset",
-      over = "Excite",
-      leave = "Reset",
-    }
-  },
   Fancy_Shadow = {
     _name = "Fancy Shadow",
     _type = "Shadow",
     Dimensions = {
       _color = "Black",
-      _shape = "Fancy Body"
+      _shape = "Fancy_Body"
     },
     Position = {
       _xOffset = 20,
@@ -433,7 +404,7 @@ local Elements = {
     _type = "Decoration",
     Dimensions = {
       _padding = 30,
-      _shape = "Fancy Decoration",
+      _shape = "Fancy_Decoration",
       _color = "Primary",
       _width = 1/4,
       _height = 1/2
@@ -453,7 +424,7 @@ local Elements = {
     _type = "Body",
     Dimensions = {
       _padding = 30,
-      _shape = "Fancy Body",
+      _shape = "Fancy_Body",
       _color = "Primary"
     },
     Text = {
@@ -466,7 +437,7 @@ local Elements = {
     Dimensions = {
       _width = 3/8,
       _height = 1/4,
-      _shape = "Fancy Header",
+      _shape = "Fancy_Header",
       _color = "Accent"
     },
     Position = {
@@ -481,7 +452,7 @@ local Elements = {
     Dimensions = {
       _height = 1/2,
       _width = 1/8,
-      _shape = "Fancy Box",
+      _shape = "Box",
       _color = "Red"
     },
     Position = {
@@ -508,7 +479,7 @@ local Elements = {
     Dimensions = {
       _width = 7/32,
       _height = 1/4,
-      _shape = "Fancy Box",
+      _shape = "Box",
       _color = "Blue"
     },
     Position = {
@@ -535,7 +506,7 @@ local Elements = {
     Dimensions = {
       _width = 7/32,
       _height = 1/4,
-      _shape = "Fancy Box",
+      _shape = "Box",
       _color = "Blue"
     },
     Position = {
@@ -571,27 +542,13 @@ local Elements = {
     _type = "Body",
     Dimensions = {
       _padding = 20,
-      _shape = "Rounded Box",
+      _shape = "Box",
       _alpha = 0.75,
       _color = "Primary"
     },
     Text = {
       _text = "@None",
       _alignX = "left"
-    }
-  },
-  Simple_Image = {
-    _name = "Simple Image",
-    _type = "Image",
-    Dimensions = {
-      _color = "Clear",
-      _shape = "FavoriteAlbum"
-    },
-    Position = {
-      _alignX = "Right"
-    },
-    Text = {
-      _text = "@None"
     }
   }
 }
