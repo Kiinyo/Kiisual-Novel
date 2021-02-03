@@ -118,7 +118,7 @@ K = {
   -- If no arguments are given, executes the scene's current page
   ePge = function (scene, chapter, page)
     chapter = chapter or scene.Script._current
-    chapter = require("script/chapters/"..chapter)
+    chapter = require("script/story/"..chapter)
 
     page = page or scene.Script._index
 
