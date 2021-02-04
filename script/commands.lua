@@ -260,6 +260,18 @@ K = {
       return Kii.Scene.addContainer(scene, container)
   
     end,
+
+    -- Adds a bookmark to be returned to by a later call
+    aBmk = function (scene, bookmarkName)
+      K.sFlg(scene, bookmarkName, {scene.Script._current, scene.Script._index})
+    end,
+    -- Goes to and executes the bookmark
+    eBmk = function (scene, bookmarkName)
+      local bookmark = K.gFlg(scene, bookmarkName)
+      if bookmark then
+        K.sPge(scene, bookmark[1], bookmark[2])
+      end
+    end,
   
     -- Sets a Flag for the Scene
     -- If no contents given, clears flag
