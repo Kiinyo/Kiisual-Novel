@@ -265,6 +265,16 @@ K = {
       Kii.Scene.removeContainer(scene, K.sFlg(scene, container, nil))
     end,
 
+    tCon = function (scene, container, type, magnitude, duration)
+      container = K.gFlg(scene, container)
+  
+      if type == "Zoom" then
+        Kii.Container.zoom(scene.Containers[Kii.Scene.findIndex(scene, container)], magnitude, duration)
+      elseif type == "Flip" then
+        Kii.Container.flip(scene.Containers[Kii.Scene.findIndex(scene, container)], duration)
+      end
+    end,
+
     -- Adds a bookmark to be returned to by a later call
     aBmk = function (scene, bookmarkName)
       K.sFlg(scene, bookmarkName, {scene.Script._current, scene.Script._index})
