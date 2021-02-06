@@ -257,8 +257,12 @@ K = {
   
       Kii.Container.setPosition(container, x, y, true)
   
-      return Kii.Scene.addContainer(scene, container)
+      K.sFlg(scene, container, Kii.Scene.addContainer(scene, container))
   
+    end,
+
+    rCon = function (scene, container, animation, duration)
+      Kii.Scene.removeContainer(scene, K.sFlg(scene, container, nil))
     end,
 
     -- Adds a bookmark to be returned to by a later call
