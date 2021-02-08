@@ -275,6 +275,38 @@ K = {
       end
     end,
 
+    mCon = function (scene, container, x, y, duration, raw)
+      container = K.gFlg(scene, container)
+      local oldX = scene.Containers[Kii.Scene.findIndex(scene, container)].Position._x
+      local oldY = scene.Containers[Kii.Scene.findIndex(scene, container)].Position._y
+  
+      if x ~= nil then
+        if raw then
+        else
+          x = x - scene.Containers[Kii.Scene.findIndex(scene, container)].Resize._targetWidth / 2
+        end
+        else
+        x = oldX
+      end
+  
+      if y ~= nil then
+        if raw then
+        else
+          y = y - scene.Containers[Kii.Scene.findIndex(scene, container)].Resize._targetHeight / 2
+        end
+        else
+        y = oldY
+      end
+  
+      duration = duration or 30
+  
+      Kii.Container.move(
+        scene.Containers[Kii.Scene.findIndex(scene, container)],
+        x, y, duration
+      )
+  
+      return {oldX, oldY}
+    end,
     -- Adds a bookmark to be returned to by a later call
     aBmk = function (scene, bookmarkName)
       K.sFlg(scene, bookmarkName, {scene.Script._current, scene.Script._index})
